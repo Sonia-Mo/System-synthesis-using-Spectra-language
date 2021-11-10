@@ -8,28 +8,35 @@ define Dim := 8;
 type Coord = Int(0..Dim);
 type Point = Coord[2];
 
-//env Point targetA;
-//env Point targetB;
-//env Point targetC;
+sys Coord robotX;
+sys Coord robotY;
 
-sys Point robot;
+// define obstacles variables:
+sys Point[NumObstacles] obstacles;
+gar alw obstacles[0][0] = 5 & obstacles[0][1] = 0;
+gar alw obstacles[1][0] = 1 & obstacles[1][1] = 1;
+gar alw obstacles[2][0] = 5 & obstacles[2][1] = 1;
+gar alw obstacles[3][0] = 3 & obstacles[3][1] = 3;
+gar alw obstacles[4][0] = 5 & obstacles[4][1] = 3;
+gar alw obstacles[5][0] = 2 & obstacles[5][1] = 5;
+gar alw obstacles[6][0] = 5 & obstacles[6][1] = 5;
+gar alw obstacles[7][0] = 3 & obstacles[7][1] = 7;
+gar alw obstacles[8][0] = 5 & obstacles[8][1] = 7;
 
-env Point[NumObstacles] obstacles;
+gar ini robotX = 0 & robotY = 0;
 
-gar ini robot[0] = 0 & robot[1] = 0;
-
-gar alw next(robot[1]) = robot[1] - 1 &  robot[1] != 0 | 
-		next(robot[1]) = robot[1] + 1 &  robot[1] != Dim | 
-		next(robot[1]) = robot[1];
+// move robot by at most 1 step each state: 
+gar alw next(robotY) = robotY - 1 &  robotY != 0 | 
+		next(robotY) = robotY + 1 &  robotY != Dim | 
+		next(robotY) = robotY;
 		
-gar alw next(robot[0]) = robot[0] - 1 &  robot[0] != 0 | 
-		next(robot[0]) = robot[0] + 1 &  robot[0] != Dim | 
-		next(robot[0]) = robot[0];
+gar alw next(robotX) = robotX - 1 &  robotX != 0 | 
+		next(robotX) = robotX + 1 &  robotX != Dim | 
+		next(robotX) = robotX;
 		
 		
-gar alw forall i in Int(0..(NumObstacles - 1)). robot[0] != obstacles[i][0] & robot[1] != obstacles[i][1];
+gar alw forall i in Int(0..(NumObstacles - 1)). !(robotX = obstacles[i][0] & robotY = obstacles[i][1]);
 
-
-//TODO delete:
-gar alw robot[0] = Dim & robot[1] = Dim implies next(robot[0]) = robot[0] & next(robot[1]) = robot[1];
-gar alwEv robot[0] = Dim & robot[1] = Dim;
+//TODO remove later
+gar alw robotX = Dim & robotY = Dim implies next(robotX) = robotX & next(robotY) = robotY;
+gar alwEv robotX = Dim & robotY = Dim;
