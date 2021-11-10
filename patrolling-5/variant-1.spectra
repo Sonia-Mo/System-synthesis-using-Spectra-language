@@ -1,0 +1,35 @@
+import "./imports/DwyerPatternsNamed.spectra"
+
+spec Robot
+
+define NumObstacles := 9;
+define Dim := 8;
+
+type Coord = Int(0..Dim);
+type Point = Coord[2];
+
+//env Point targetA;
+//env Point targetB;
+//env Point targetC;
+
+sys Point robot;
+
+env Point[NumObstacles] obstacles;
+
+gar ini robot[0] = 0 & robot[1] = 0;
+
+gar alw next(robot[1]) = robot[1] - 1 &  robot[1] != 0 | 
+		next(robot[1]) = robot[1] + 1 &  robot[1] != Dim | 
+		next(robot[1]) = robot[1];
+		
+gar alw next(robot[0]) = robot[0] - 1 &  robot[0] != 0 | 
+		next(robot[0]) = robot[0] + 1 &  robot[0] != Dim | 
+		next(robot[0]) = robot[0];
+		
+		
+gar alw forall i in Int(0..(NumObstacles - 1)). robot[0] != obstacles[i][0] & robot[1] != obstacles[i][1];
+
+
+//TODO delete:
+gar alw robot[0] = Dim & robot[1] = Dim implies next(robot[0]) = robot[0] & next(robot[1]) = robot[1];
+gar alwEv robot[0] = Dim & robot[1] = Dim;
