@@ -18,67 +18,81 @@ define at_targetA := robotX = targetA[0] & robotY = targetA[1];
 define at_targetB := robotX = targetB[0] & robotY = targetB[1];
 define at_targetC := robotX = targetC[0] & robotY = targetC[1];
 
+define robot_at_origin := at_origin(robotX, robotY);
+
+sys boolean visited_origin;
+
 sys boolean was_at_targetA;
 sys boolean was_at_targetB;
 sys boolean was_at_targetC;
 
 // Assume that targets cannot be at (0,0) or on one of the obstacles
-asm ini !on_obstacle(targetA[0], targetA[1]) & !on_obstacle(targetB[0], targetB[1]) & !on_obstacle(targetC[0], targetC[1]);
-asm ini !at_origin(targetA[0], targetA[1]) & !at_origin(targetB[0], targetB[1]) & !at_origin(targetC[0], targetC[1]);
+asm ini !on_obstacle(targetA[0], targetA[1]) &
+		!on_obstacle(targetB[0], targetB[1]) & 
+		!on_obstacle(targetC[0], targetC[1]);
+asm ini !at_origin(targetA[0], targetA[1]) & 
+		!at_origin(targetB[0], targetB[1]) & 
+		!at_origin(targetC[0], targetC[1]);
 
 // Assume that target locations never change during a run
-asm alw fixed_inplace(targetA[0], targetA[1]) & fixed_inplace(targetB[0], targetB[1]) & fixed_inplace(targetC[0], targetC[1]);
+asm alw fixed_inplace(targetA[0], targetA[1]) &
+		fixed_inplace(targetB[0], targetB[1]) &
+		fixed_inplace(targetC[0], targetC[1]);
 
+gar alw robot_at_origin implies visited_origin;
+
+// visited_origin keeps it's current state unless robot steps over a target or is at origin. 
+gar alw visited_origin = next(visited_origin) |	
+		next(robot_at_origin) | at_targetA | at_targetB | at_targetC;
+		
+// If the robot visits the target then it must have visited origin first and visited_origin flag should be switched to false.		
+gar alw at_targetA | at_targetB | at_targetC implies visited_origin & !next(visited_origin) | next(robot_at_origin);
+
+gar alwEv visited_origin;
+ 
+  
 // At the initial step, the robot didn't visit any of the targets yet
 gar ini !was_at_targetA & !was_at_targetB & !was_at_targetC;
 
 // Fix the initial location of the robot at (0,0)
-gar ini at_origin(robotX, robotY);
+gar ini robot_at_origin;
 
 // Move robot by at most 1 step each state: 
-gar alw next(robotY) = robotY - 1 &  robotY != 0 | next(robotY) = robotY + 1 &  robotY != Dim | next(robotY) = robotY;	
-gar alw next(robotX) = robotX - 1 &  robotX != 0 | next(robotX) = robotX + 1 &  robotX != Dim | next(robotX) = robotX;
+gar alw next(robotY) = robotY - 1 | next(robotY) = robotY + 1 | next(robotY) = robotY;	
+gar alw next(robotX) = robotX - 1 | next(robotX) = robotX + 1 | next(robotX) = robotX;
 		
 // Make sure robot doesn't walk over obstacles
 gar alw !on_obstacle(robotX, robotY);	
 	
 // Make sure the robot visits the locations an infinite amount of times
-// TODO: this way it is realizable, when i change to at_targetA it stops being realizable
 gar alwEv at_targetA;
 gar alwEv at_targetB;
 gar alwEv at_targetC;
-	
-gar alw at_targetA implies next(was_at_targetA) & !next(at_targetA);
-gar alw at_targetB implies next(was_at_targetB) & !next(at_targetB);
-gar alw at_targetC implies next(was_at_targetC) & !next(at_targetC);
 
-gar alw was_at_targetA = next(was_at_targetA) |	at_targetA | visited_all_targets();
-gar alw was_at_targetB = next(was_at_targetB) |	at_targetB | visited_all_targets();
-gar alw was_at_targetC = next(was_at_targetC) |	at_targetC | visited_all_targets();
+// Turn on was_at flags after a visit
+gar alw (at_targetA implies was_at_targetA) & 
+		(at_targetB implies was_at_targetB) & 
+		(at_targetC implies was_at_targetC);
 
-predicate visited_all_targets():
-	was_at_targetA & was_at_targetB & was_at_targetC implies !next(was_at_targetA) & !next(was_at_targetB) & !next(was_at_targetC);
+// Target should be stepped over if the round hasn't finished yet
+gar alw (was_at_targetA implies !next(at_targetA)) & 
+		(was_at_targetB implies !next(at_targetB)) &
+		(was_at_targetC implies !next(at_targetC));
 
+// Next state of was_at_targetX flags should remain as in the current state except if target is currently visited
+// or all targets targets were visited in this round.
+gar alw (was_at_targetA = next(was_at_targetA) | next(at_targetA)) &
+		(was_at_targetB = next(was_at_targetB) | next(at_targetB)) &
+		(was_at_targetC = next(was_at_targetC) | next(at_targetC)) |
+	  	visited_all_targets();
 
-// Turn on the flag in case of a target visit
-//gar alw at_targetA implies (was_at_targetA);
-//gar alw aplies (was_at_targetC);
-//t_targetB implies (was_at_targetB);
-//gar alw at_targetC im
-// Make sure the robot doesn't start a new round before finishing the former
-//gar alw was_at_targetA implies !next(at_targetA);
-//gar alw was_at_targetB implies !next(at_targetB);
-//gar alw was_at_targetC implies !next(at_targetC);
-
-// After the robot has visited all targets, location variables are initialized back to 'false' 
-//gar alw was_at_targetA & was_at_targetB & was_at_targetC implies !next(was_at_targetA) & !next(was_at_targetB) & !next(was_at_targetC);
-
-
+gar alw visited_all_targets() implies 
+	!next(was_at_targetA) & !next(was_at_targetB) & !next(was_at_targetC);
 
 predicate on_obstacle(Coord x, Coord y):
 	(x = 5 & y = 0) | (x = 1 & y = 1) | (x = 5 & y = 1) |
-							  (x = 3 & y = 3) | (x = 5 & y = 3) | (x = 2 & y = 5) |
-							  (x = 5 & y = 5) | (x = 3 & y = 7) | (x = 5 & y = 7);
+	(x = 3 & y = 3) | (x = 5 & y = 3) | (x = 2 & y = 5) |
+	(x = 5 & y = 5) | (x = 3 & y = 7) | (x = 5 & y = 7);
 
 predicate at_origin(Coord x, Coord y):
 	x = 0 & y = 0;
@@ -86,4 +100,5 @@ predicate at_origin(Coord x, Coord y):
 predicate fixed_inplace(Coord x, Coord y):
 	x = next(x) & y = next(y);
 
-		
+predicate visited_all_targets():
+	was_at_targetA & was_at_targetB & was_at_targetC;

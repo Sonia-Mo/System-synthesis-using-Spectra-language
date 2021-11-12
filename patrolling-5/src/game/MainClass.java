@@ -50,6 +50,7 @@ public class MainClass {
 			}
 			while (forbbiden_points.contains(rand_target));
 			goals[i] = rand_target;
+			forbbiden_points.add(rand_target);
 		}
 		
 		ControlPanel cp;
