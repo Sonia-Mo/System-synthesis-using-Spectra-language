@@ -3,9 +3,13 @@ package game;
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
+import javax.imageio.ImageIO;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 
@@ -23,13 +27,13 @@ public class ControlPanel {
 	// board constants
 	final int dim = 100;
 	static final int y_offset = 30;
-
+	
 	int num_robots;
 	int num_obstacles;
 	Point[] robots;
 	Point[] obstacles;
 	Point[] goals;
-
+	
 	// holds the robots previous position (for use when animating transitions)
 	Point[] robots_prev = new Point[num_robots];
 
@@ -72,6 +76,15 @@ public class ControlPanel {
 
 		// init controller
 		executor = new ControllerExecutor(new BasicJitController(), this.path);
+		
+		// TODO: Choose targets randomly
+		inputs.put("targetA[0]", Integer.toString(goals[0].getX()));
+		inputs.put("targetA[1]", Integer.toString(goals[0].getY()));
+		inputs.put("targetB[0]", Integer.toString(goals[1].getX()));
+		inputs.put("targetB[1]", Integer.toString(goals[1].getY()));
+		inputs.put("targetC[0]", Integer.toString(goals[2].getX()));
+		inputs.put("targetC[1]", Integer.toString(goals[2].getY()));
+
 		executor.initState(inputs);
 
 		Map<String, String> sysValues = executor.getCurrOutputs();
