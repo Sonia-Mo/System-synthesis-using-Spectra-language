@@ -41,9 +41,6 @@ public class Board extends JPanel {
 		target_graphics = new Point[cp.num_robots];
 		robots_images = new BufferedImage[cp.num_robots];
 		base_robot_images = new BufferedImage[cp.num_robots];
-//		goals_images = new BufferedImage[cp.num_robots];
-		
-		// TODO: change size of array
 		goals_images = new BufferedImage[cp.goals.length];
 
 	}
@@ -60,12 +57,9 @@ public class Board extends JPanel {
 		// Load images for different elements
 		for (int i = 0; i < cp.num_robots; i++) {
 			base_robot_images[i] = ImageIO.read(new File("img/Robot" + String.valueOf(i) + ".png"));
-			robots_images[i] = ImageIO.read(new File("img/Robot" + String.valueOf(i) + ".png"));
-//			goals_images[i] = ImageIO.read(new File("img/Goal" + String.valueOf(i) + ".png"));
-			
+			robots_images[i] = ImageIO.read(new File("img/Robot" + String.valueOf(i) + ".png"));			
 		}
 		
-		// TODO: set target image to Goal1
 		for (int i = 0; i < cp.goals.length; i++) {
 			goals_images[i] = ImageIO.read(new File("img/Goal1.png"));
 		}
@@ -190,10 +184,6 @@ public class Board extends JPanel {
 			g2d.setColor(Color.WHITE);
 			// g2d.drawImage(robot_image, temp, dim, null);
 			// Draw goals
-//			for (int i = 0; i < cp.num_robots; i++) {
-//				g2d.drawImage(goals_images[i], cp.goals[i].getX() * cp.dim, cp.goals[i].getY() * cp.dim, null);
-//			}
-			// TODO: Draw goals
 			for (int i = 0; i < cp.goals.length; i++) {
 				g2d.drawImage(goals_images[i], cp.goals[i].getX() * cp.dim, cp.goals[i].getY() * cp.dim, null);
 			}
@@ -206,7 +196,6 @@ public class Board extends JPanel {
 				g2d.drawImage(obstacle_image, cp.obstacles[i].getX() * cp.dim, cp.obstacles[i].getY() * cp.dim, null);
 			}
 		}
-
 	}
 
 	@Override

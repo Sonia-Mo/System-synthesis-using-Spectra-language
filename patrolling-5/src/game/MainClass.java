@@ -1,8 +1,10 @@
 package game;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import tau.smlab.syntech.controller.executor.ControllerExecutor;
 import tau.smlab.syntech.controller.jit.BasicJitController;
@@ -13,8 +15,8 @@ public class MainClass {
 		int x = 9;
 		int y = 9;
 		int num_robots = 1;
+		final int num_obstacles = 9;
 		
-		// TODO: target coordinates
 		int x_target;
 		int y_target;
 		final int num_targets = 3;
@@ -29,25 +31,25 @@ public class MainClass {
 		obstacles[6] = new Point(5, 5);
 		obstacles[7] = new Point(3, 7);
 		obstacles[8] = new Point(5, 7);
-
-//		Point[] goals = new Point[num_robots];
 		
-		// TODO: Choose targets randomly
 		Point[] goals = new Point[num_targets];
+		
+		// Initialize set with all points that could not serve as targets
+		Set<Point> forbbiden_points = new HashSet<>();
+		for (int i = 0; i < num_obstacles; i++) {
+			forbbiden_points.add(obstacles[i]);
+		}
+		forbbiden_points.add(new Point(0,0));
 
+		// Choose targets randomly
 		Random rand = new Random();
 		for (int i = 0; i < num_targets; i++) {
+			Point rand_target;
 			do {
-				x_target = rand.nextInt(8);
-				y_target = rand.nextInt(8);
+				rand_target = new Point(rand.nextInt(8), rand.nextInt(8));
 			}
-			// TODO: maybe try to change to something else?!
-			while (x_target == 0 & y_target == 0 | x_target == 5 & y_target == 0 | x_target == 1 & y_target == 1 |
-					x_target == 5 & y_target == 1 | x_target == 3 & y_target == 3 | x_target == 5 & y_target == 3 |
-					x_target == 2 & y_target == 5 | x_target == 5 & y_target == 5 | x_target == 3 & y_target == 7 |
-					x_target == 5 & y_target == 7);
-			
-			goals[i] = new Point(x_target, y_target);
+			while (forbbiden_points.contains(rand_target));
+			goals[i] = rand_target;
 		}
 		
 		ControlPanel cp;

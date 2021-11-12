@@ -1,25 +1,9 @@
 import "./imports/DwyerPatternsNamed.spectra"
 
 spec Robot
-
-// TODO: do we need it?  
-//define NumObstacles := 9;		
+	
 define Dim := 8;
-define Initial_location := robotX = 0 & robotY = 0;
-// Define hard-coded obstacles:
-define Walk_over_obstacles := (robotX = 5 & robotY = 0) | (robotX = 1 & robotY = 1) | (robotX = 5 & robotY = 1) |
-							  (robotX = 3 & robotY = 3) | (robotX = 5 & robotY = 3) | (robotX = 2 & robotY = 5) |
-							  (robotX = 5 & robotY = 5) | (robotX = 3 & robotY = 7) | (robotX = 5 & robotY = 7);
-// TODO :( :( is there a better way?????
-define Target_on_obstacles := (targetA[0] = 5 & targetA[1] = 0) | (targetA[0] = 1 & targetA[1] = 1) | (targetA[0] = 5 & targetA[1] = 1) |
-							  (targetA[0] = 3 & targetA[1] = 3) | (targetA[0] = 5 & targetA[1] = 3) | (targetA[0] = 2 & targetA[1] = 5) |
-							  (targetA[0] = 5 & targetA[1] = 5) | (targetA[0] = 3 & targetA[1] = 7) | (targetA[0] = 5 & targetA[1] = 7) |
-							  (targetB[0] = 5 & targetB[1] = 0) | (targetB[0] = 1 & targetB[1] = 1) | (targetB[0] = 5 & targetB[1] = 1) |
-							  (targetB[0] = 3 & targetB[1] = 3) | (targetB[0] = 5 & targetB[1] = 3) | (targetB[0] = 2 & targetB[1] = 5) |
-							  (targetB[0] = 5 & targetB[1] = 5) | (targetB[0] = 3 & targetB[1] = 7) | (targetB[0] = 5 & targetB[1] = 7) |
-							  (targetC[0] = 5 & targetC[1] = 0) | (targetC[0] = 1 & targetC[1] = 1) | (targetC[0] = 5 & targetC[1] = 1) |
-							  (targetC[0] = 3 & targetC[1] = 3) | (targetC[0] = 5 & targetC[1] = 3) | (targetC[0] = 2 & targetC[1] = 5) |
-							  (targetC[0] = 5 & targetC[1] = 5) | (targetC[0] = 3 & targetC[1] = 7) | (targetC[0] = 5 & targetC[1] = 7);							  
+
 type Coord = Int(0..Dim);
 type Point = Coord[2];
 
@@ -30,58 +14,76 @@ env Point targetA;
 env Point targetB;
 env Point targetC;
 
-define visit_targetA := robotX = targetA[0] & robotY = targetA[1];
-define visit_targetB := robotX = targetB[0] & robotY = targetB[1];
-define visit_targetC := robotX = targetC[0] & robotY = targetC[1];
+define at_targetA := robotX = targetA[0] & robotY = targetA[1];
+define at_targetB := robotX = targetB[0] & robotY = targetB[1];
+define at_targetC := robotX = targetC[0] & robotY = targetC[1];
 
 sys boolean was_at_targetA;
 sys boolean was_at_targetB;
 sys boolean was_at_targetC;
 
 // Assume that targets cannot be at (0,0) or on one of the obstacles
-asm ini !Target_on_obstacles;
-asm alw !(targetA[0] = 0 & targetA[1] = 0);
-asm alw !(targetB[0] = 0 & targetB[1] = 0);
-asm alw !(targetC[0] = 0 & targetC[1] = 0);
+asm ini !on_obstacle(targetA[0], targetA[1]) & !on_obstacle(targetB[0], targetB[1]) & !on_obstacle(targetC[0], targetC[1]);
+asm ini !at_origin(targetA[0], targetA[1]) & !at_origin(targetB[0], targetB[1]) & !at_origin(targetC[0], targetC[1]);
 
 // Assume that target locations never change during a run
-asm alw targetA[0] = next(targetA[0]) & targetA[1] = next(targetA[1]);
-asm alw targetB[0] = next(targetB[0]) & targetB[1] = next(targetB[1]);
-asm alw targetC[0] = next(targetC[0]) & targetC[1] = next(targetC[1]);
+asm alw fixed_inplace(targetA[0], targetA[1]) & fixed_inplace(targetB[0], targetB[1]) & fixed_inplace(targetC[0], targetC[1]);
 
 // At the initial step, the robot didn't visit any of the targets yet
 gar ini !was_at_targetA & !was_at_targetB & !was_at_targetC;
+
 // Fix the initial location of the robot at (0,0)
-gar ini Initial_location;
+gar ini at_origin(robotX, robotY);
 
 // Move robot by at most 1 step each state: 
 gar alw next(robotY) = robotY - 1 &  robotY != 0 | next(robotY) = robotY + 1 &  robotY != Dim | next(robotY) = robotY;	
 gar alw next(robotX) = robotX - 1 &  robotX != 0 | next(robotX) = robotX + 1 &  robotX != Dim | next(robotX) = robotX;
 		
 // Make sure robot doesn't walk over obstacles
-gar alw !Walk_over_obstacles;	
+gar alw !on_obstacle(robotX, robotY);	
 	
 // Make sure the robot visits the locations an infinite amount of times
-// TODO: this way it is realizable, when i change to visit_targetA it stops being realizable
-gar alwEv visit_targetA;
-gar alwEv visit_targetB;
-gar alwEv visit_targetC;
+// TODO: this way it is realizable, when i change to at_targetA it stops being realizable
+gar alwEv at_targetA;
+gar alwEv at_targetB;
+gar alwEv at_targetC;
+	
+gar alw at_targetA implies next(was_at_targetA) & !next(at_targetA);
+gar alw at_targetB implies next(was_at_targetB) & !next(at_targetB);
+gar alw at_targetC implies next(was_at_targetC) & !next(at_targetC);
+
+gar alw was_at_targetA = next(was_at_targetA) |	at_targetA | visited_all_targets();
+gar alw was_at_targetB = next(was_at_targetB) |	at_targetB | visited_all_targets();
+gar alw was_at_targetC = next(was_at_targetC) |	at_targetC | visited_all_targets();
+
+predicate visited_all_targets():
+	was_at_targetA & was_at_targetB & was_at_targetC implies !next(was_at_targetA) & !next(was_at_targetB) & !next(was_at_targetC);
+
 
 // Turn on the flag in case of a target visit
-//gar alw visit_targetA implies (was_at_targetA);
-//gar alw visit_targetB implies (was_at_targetB);
-//gar alw visit_targetC implies (was_at_targetC);
-
+//gar alw at_targetA implies (was_at_targetA);
+//gar alw aplies (was_at_targetC);
+//t_targetB implies (was_at_targetB);
+//gar alw at_targetC im
 // Make sure the robot doesn't start a new round before finishing the former
-//gar alw was_at_targetA implies !next(visit_targetA);
-//gar alw was_at_targetB implies !next(visit_targetB);
-//gar alw was_at_targetC implies !next(visit_targetC);
+//gar alw was_at_targetA implies !next(at_targetA);
+//gar alw was_at_targetB implies !next(at_targetB);
+//gar alw was_at_targetC implies !next(at_targetC);
 
 // After the robot has visited all targets, location variables are initialized back to 'false' 
 //gar alw was_at_targetA & was_at_targetB & was_at_targetC implies !next(was_at_targetA) & !next(was_at_targetB) & !next(was_at_targetC);
 
 
 
+predicate on_obstacle(Coord x, Coord y):
+	(x = 5 & y = 0) | (x = 1 & y = 1) | (x = 5 & y = 1) |
+							  (x = 3 & y = 3) | (x = 5 & y = 3) | (x = 2 & y = 5) |
+							  (x = 5 & y = 5) | (x = 3 & y = 7) | (x = 5 & y = 7);
 
+predicate at_origin(Coord x, Coord y):
+	x = 0 & y = 0;
+
+predicate fixed_inplace(Coord x, Coord y):
+	x = next(x) & y = next(y);
 
 		
