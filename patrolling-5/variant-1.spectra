@@ -2,9 +2,9 @@ import "./imports/DwyerPatternsNamed.spectra"
 
 spec Robot
 	
-define Dim := 8;
+define Dim := 5;
 
-type Coord = Int(0..Dim);
+type Coord = Int(0..(Dim - 1));
 type Point = Coord[2];
 
 sys Coord robotX;
@@ -20,8 +20,6 @@ define at_targetC := robotX = targetC[0] & robotY = targetC[1];
 
 define robot_at_origin := at_origin(robotX, robotY);
 
-sys boolean visited_origin;
-
 // Assume that targets cannot be at (0,0) or on one of the obstacles
 asm ini !on_obstacle(targetA[0], targetA[1]) &
 		!on_obstacle(targetB[0], targetB[1]) & 
@@ -34,14 +32,6 @@ asm ini !at_origin(targetA[0], targetA[1]) &
 asm alw fixed_inplace(targetA[0], targetA[1]) &
 		fixed_inplace(targetB[0], targetB[1]) &
 		fixed_inplace(targetC[0], targetC[1]);
-
-gar alw robot_at_origin implies visited_origin;
-
-// visited_origin keeps it's current state unless robot steps over a target or is at origin. 
-gar alw visited_origin = next(visited_origin) |	next(robot_at_origin) | at_targetA | at_targetB | at_targetC;
-		
-// If the robot visits the target then it must have visited origin first and visited_origin flag should be switched to false.		
-gar alw at_targetA | at_targetB | at_targetC implies visited_origin & (!next(visited_origin) | next(robot_at_origin));
 
 // Fix the initial location of the robot at (0,0)
 gar ini robot_at_origin;
@@ -57,11 +47,10 @@ gar alw !on_obstacle(robotX, robotY);
 gar alwEv at_targetA;
 gar alwEv at_targetB;
 gar alwEv at_targetC;
+gar alwEv robot_at_origin;
 
 predicate on_obstacle(Coord x, Coord y):
-	(x = 5 & y = 0) | (x = 1 & y = 1) | (x = 5 & y = 1) |
-	(x = 3 & y = 3) | (x = 5 & y = 3) | (x = 2 & y = 5) |
-	(x = 5 & y = 5) | (x = 3 & y = 7) | (x = 5 & y = 7);
+	(x = 1 & y = 1) | (x = 2 & y = 1) | (x = 0 & y = 3) | (x = 3 & y = 3) | (x = 3 & y = 4);
 
 predicate at_origin(Coord x, Coord y):
 	x = 0 & y = 0;
