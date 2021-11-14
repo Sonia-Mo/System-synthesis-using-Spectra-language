@@ -32,6 +32,9 @@ public class Board extends JPanel {
 	BufferedImage[] goals_images;
 	BufferedImage[] base_robot_images;
 	BufferedImage obstacle_image;
+	BufferedImage origin_green_image;
+	BufferedImage origin_red_image;
+
 
 	public Board(ControlPanel cp) {
 		super();
@@ -63,6 +66,9 @@ public class Board extends JPanel {
 		for (int i = 0; i < cp.goals.length; i++) {
 			goals_images[i] = ImageIO.read(new File("img/Goal1.png"));
 		}
+		
+		origin_red_image = ImageIO.read(new File("img/Red Starting Point.png"));
+		origin_green_image = ImageIO.read(new File("img/Green Starting Point.png"));
 	}
 
 	// Animate a transition (from robots_prev to robots)
@@ -129,7 +135,7 @@ public class Board extends JPanel {
 									+ target_graphics[i].getY() * ((double) (animation_steps) / num_steps)));
 				}
 				animation_steps++;
-				// Redraw
+				// Redraw	
 				updateBuffer();
 				repaint();
 			}
@@ -195,6 +201,17 @@ public class Board extends JPanel {
 			for (int i = 0; i < cp.num_obstacles; i++) {
 				g2d.drawImage(obstacle_image, cp.obstacles[i].getX() * cp.dim, cp.obstacles[i].getY() * cp.dim, null);
 			}
+			
+			switch(cp.variant_num) {
+			case 2:
+				if (cp.origin_color == game.Color.GREEN) {
+					g2d.drawImage(origin_green_image, 0, 0, null);
+				}
+				else if (cp.origin_color == game.Color.RED) {
+					g2d.drawImage(origin_red_image, 0, 0, null);
+				}
+			}
+
 		}
 	}
 

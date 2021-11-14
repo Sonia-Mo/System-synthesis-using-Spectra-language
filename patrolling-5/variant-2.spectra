@@ -21,9 +21,9 @@ define at_targetC := robotX = targetC[0] & robotY = targetC[1];
 define robot_at_origin := at_origin(robotX, robotY);
 
 // Assume that targets cannot be at (0,0) or on one of the obstacles
-asm ini !on_obstacle(targetA[0], targetA[1]) &
-		!on_obstacle(targetB[0], targetB[1]) & 
-		!on_obstacle(targetC[0], targetC[1]);
+//asm ini !on_obstacle(targetA[0], targetA[1]) &
+//		!on_obstacle(targetB[0], targetB[1]) & 
+//		!on_obstacle(targetC[0], targetC[1]);
 asm ini !at_origin(targetA[0], targetA[1]) & 
 		!at_origin(targetB[0], targetB[1]) & 
 		!at_origin(targetC[0], targetC[1]);
@@ -32,22 +32,13 @@ asm ini !at_origin(targetA[0], targetA[1]) &
 asm alw fixed_inplace(targetA[0], targetA[1]) &
 		fixed_inplace(targetB[0], targetB[1]) &
 		fixed_inplace(targetC[0], targetC[1]);
-
-// Fix the initial location of the robot at (0,0)
-gar ini robot_at_origin;
+		
+// Make sure robot doesn't walk over obstacles
+//gar alw !on_obstacle(robotX, robotY);	
 
 // Move robot by at most 1 step each state: 
 gar alw next(robotY) = robotY - 1 | next(robotY) = robotY + 1 | next(robotY) = robotY;	
 gar alw next(robotX) = robotX - 1 | next(robotX) = robotX + 1 | next(robotX) = robotX;
-		
-// Make sure robot doesn't walk over obstacles
-gar alw !on_obstacle(robotX, robotY);	
-	
-// Make sure the robot visits the locations an infinite amount of times
-gar alwEv at_targetA;
-gar alwEv at_targetB;
-gar alwEv at_targetC;
-gar alwEv robot_at_origin;
 
 predicate on_obstacle(Coord x, Coord y):
 	(x = 1 & y = 1) | (x = 2 & y = 1) | (x = 0 & y = 3) | (x = 3 & y = 3) | (x = 3 & y = 4);
@@ -57,3 +48,22 @@ predicate at_origin(Coord x, Coord y):
 
 predicate fixed_inplace(Coord x, Coord y):
 	x = next(x) & y = next(y);
+	
+	
+sys {RED, GREEN} color;
+sys {A, AB, ABC} progress;
+
+gar ini robot_at_origin;
+gar ini progress = ABC;
+
+gar alw progress = ABC -> color = RED;
+gar alw !(progress = ABC) -> color = GREEN;
+
+gar alwEv at_targetA;
+
+gar alw progress = A implies (next(progress) = A & !next(at_targetA | at_targetB | at_targetC)) | 
+								(next(at_targetB) & next(progress) = AB);
+gar alw progress = AB implies (next(progress) = AB & !next(at_targetA | at_targetB | at_targetC)) |
+								(next(at_targetC) & next(progress) = ABC);
+gar alw progress = ABC implies (next(progress) = ABC & !next(at_targetA | at_targetB | at_targetC)) |
+								(next(at_targetA) & next(progress) = A);

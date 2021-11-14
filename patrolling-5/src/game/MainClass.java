@@ -11,6 +11,19 @@ import tau.smlab.syntech.controller.jit.BasicJitController;
 
 public class MainClass {
 	public static void main(String args[]) throws Exception {
+		
+		// Read variant_num from the programs arguments with default value set to 1.
+		int variant_num;
+		try {
+			variant_num = Integer.parseInt(args[0]);
+			if (variant_num < 1 || variant_num > 3) {
+				variant_num = 1;
+			}
+		}
+		catch (Exception e)
+		{
+			variant_num = 1;
+		}
 
 		int x = 5;
 		int y = 5;
@@ -50,7 +63,7 @@ public class MainClass {
 		String path = "out//";
 
 		System.out.println("Running the system");
-		cp = new ControlPanel(x, y, num_robots, obstacles, goals, path);
+		cp = new ControlPanel(x, y, num_robots, obstacles, goals, path, variant_num);
 		cp.init();
 
 	}
