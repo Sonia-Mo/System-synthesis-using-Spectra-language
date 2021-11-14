@@ -20,6 +20,8 @@ import tau.smlab.syntech.controller.jit.BasicJitController;
  * Manages the simulation - GUI, controller input/output, board (visualization)
  */
 
+enum Color {RED, GREEN, YELLOW}
+
 public class ControlPanel {
 	// board dimensions
 	int x;
@@ -30,6 +32,9 @@ public class ControlPanel {
 	
 	int num_robots;
 	int num_obstacles;
+	int variant_num;
+	Color origin_color;
+	
 	Point[] robots;
 	Point[] obstacles;
 	Point[] goals;
@@ -54,11 +59,12 @@ public class ControlPanel {
 	// The path to the controller files
 	String path;
 
-	public ControlPanel(int x, int y, int num_robots, Point[] obstacles, Point[] goals, String path) {
+	public ControlPanel(int x, int y, int num_robots, Point[] obstacles, Point[] goals, String path, int variant_num) {
 		this.x = x;
 		this.y = y;
 		this.num_robots = num_robots;
 		this.num_obstacles = obstacles.length;
+		this.variant_num = variant_num;
 		this.robots = new Point[num_robots];
 		this.robots_prev = new Point[num_robots];
 		this.obstacles = obstacles;
@@ -84,7 +90,7 @@ public class ControlPanel {
 		inputs.put("targetB[1]", Integer.toString(goals[1].getY()));
 		inputs.put("targetC[0]", Integer.toString(goals[2].getX()));
 		inputs.put("targetC[1]", Integer.toString(goals[2].getY()));
-
+		
 		executor.initState(inputs);
 
 		Map<String, String> sysValues = executor.getCurrOutputs();
@@ -95,6 +101,12 @@ public class ControlPanel {
 			robots_prev[i].setY(Integer.parseInt(sysValues.get("robotY")));
 			robots[i].setX(Integer.parseInt(sysValues.get("robotX")));
 			robots[i].setY(Integer.parseInt(sysValues.get("robotY")));
+		}
+		
+		switch (this.variant_num) {
+		case 2: 
+			this.origin_color = Color.RED;
+			break;
 		}
 
 		setUpUI();
@@ -118,7 +130,12 @@ public class ControlPanel {
 			robots[i].setX(Integer.parseInt(sysValues.get("robotX")));
 			robots[i].setY(Integer.parseInt(sysValues.get("robotY")));
 		}
-
+		
+		switch (this.variant_num) {
+		case 2: 
+			this.origin_color = Color.valueOf(sysValues.get("color"));
+			break;
+		}
 		// Animate transition
 		board.animate();
 	}

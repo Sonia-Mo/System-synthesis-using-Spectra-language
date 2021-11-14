@@ -1,0 +1,6 @@
+<targetA[0]:1, targetA[1]:5, targetB[0]:6, targetB[1]:4, targetC[0]:3, targetC[1]:2, robotX:0, robotY:0, visited_origin:true, color:RED, progress:ABC, Zn:0>
+<targetA[0]:1, targetA[1]:5, targetB[0]:6, targetB[1]:4, targetC[0]:3, targetC[1]:2, robotX:1, robotY:1, visited_origin:false, color:RED, progress:ABC, Zn:0>
+<targetA[0]:1, targetA[1]:5, targetB[0]:6, targetB[1]:4, targetC[0]:3, targetC[1]:2, robotX:1, robotY:2, visited_origin:true, color:RED, progress:ABC, Zn:0>
+<targetA[0]:1, targetA[1]:5, targetB[0]:6, targetB[1]:4, targetC[0]:3, targetC[1]:2, robotX:1, robotY:3, visited_origin:true, color:RED, progress:ABC, Zn:0>
+<targetA[0]:1, targetA[1]:5, targetB[0]:6, targetB[1]:4, targetC[0]:3, targetC[1]:2, robotX:1, robotY:4, visited_origin:true, color:RED, progress:ABC, Zn:0>
+<targetA[0]:1, targetA[1]:5, targetB[0]:6, targetB[1]:4, targetC[0]:3, targetC[1]:2, robotX:1, robotY:5, visited_origin:false, color:RED, progress:ABC, Zn:0>
