@@ -1,0 +1,99 @@
+import "./imports/DwyerPatternsNamed.spectra"
+
+spec Robot
+define Dim := 8;
+type robot_colors = {YELLOW, GREEN};
+type target_colors = {RED, GREEN};
+
+type Coord = Int(0..Dim);
+type Point = Coord[2];
+
+sys Coord robotX;
+sys Coord robotY;
+
+env Point targetA;
+env Point targetB;
+env Point targetC;
+//env boolean engine_problem;
+
+//sys robot_colors robot_color;
+sys target_colors targetA_color;
+sys target_colors targetB_color;
+sys target_colors targetC_color;
+
+define at_targetA := robotX = targetA[0] & robotY = targetA[1];
+define at_targetB := robotX = targetB[0] & robotY = targetB[1];
+define at_targetC := robotX = targetC[0] & robotY = targetC[1];
+
+define robot_at_origin := at_origin(robotX, robotY);
+
+// Assume that targets cannot be at (0,0) or on one of the obstacles
+//asm ini !on_obstacle(targetA[0], targetA[1]) &
+//		!on_obstacle(targetB[0], targetB[1]) & 
+//		!on_obstacle(targetC[0], targetC[1]);
+asm ini !at_origin(targetA[0], targetA[1]) & 
+		!at_origin(targetB[0], targetB[1]) & 
+		!at_origin(targetC[0], targetC[1]);
+
+// Assume that target locations never change during a run
+asm alw fixed_inplace(targetA[0], targetA[1]) &
+		fixed_inplace(targetB[0], targetB[1]) &
+		fixed_inplace(targetC[0], targetC[1]);
+
+// Fix the initial location of the robot at (0,0)
+gar ini robot_at_origin;
+
+// Move robot by at most 1 step each state: 
+gar alw next(robotY) = robotY - 1 | next(robotY) = robotY + 1 | next(robotY) = robotY;	
+gar alw next(robotX) = robotX - 1 | next(robotX) = robotX + 1 | next(robotX) = robotX;
+		
+// Make sure robot doesn't walk over obstacles
+//gar alw !on_obstacle(robotX, robotY);	
+	
+// Visit all the target locations again and again, but in non-strict order
+gar alwEv at_targetA;
+gar alwEv at_targetB;
+gar alwEv at_targetC;
+
+//predicate on_obstacle(Coord x, Coord y):
+//	(x = 5 & y = 0) | (x = 1 & y = 1) | (x = 5 & y = 1) |
+//	(x = 3 & y = 3) | (x = 5 & y = 3) | (x = 2 & y = 5) |
+//	(x = 5 & y = 5) | (x = 3 & y = 7) | (x = 5 & y = 7);
+
+predicate at_origin(Coord x, Coord y):
+	x = 0 & y = 0;
+
+predicate fixed_inplace(Coord x, Coord y):
+	x = next(x) & y = next(y);
+
+gar ini targetA_color = GREEN;
+gar ini targetB_color = GREEN;
+gar ini targetC_color = GREEN;
+
+// A robot cannot visit a location while it is red.
+gar alw targetA_color = RED implies !next(at_targetA);
+gar alw targetB_color = RED implies !next(at_targetB);
+gar alw targetC_color = RED implies !next(at_targetB);
+
+//When a robot visits a location, the location’s color is changed to red for between 3 to 5 turns. 
+gar trig [true]*[at_targetA] |=> [targetA_color = RED]{2,4}[targetA_color = GREEN];
+gar trig [true]*[at_targetB] |=> [targetB_color = RED]{2,4}[targetB_color = GREEN];
+gar trig [true]*[at_targetC] |=> [targetC_color = RED]{2,4}[targetC_color = GREEN];
+
+//After that, the location’s color is changed back to green. 
+gar alw targetA_color = GREEN implies next(targetA_color) = GREEN & !next(at_targetA) | next(at_targetA) & next(targetA_color) = RED;
+gar alw targetB_color = GREEN implies next(targetB_color) = GREEN & !next(at_targetB) | next(at_targetB) & next(targetB_color) = RED;
+gar alw targetC_color = GREEN implies next(targetC_color) = GREEN & !next(at_targetC) | next(at_targetC) & next(targetC_color) = RED;
+
+//// When an engine problem occurs, the robot changes its color to yellow and goes back to its initial location (0,0).
+//gar alw engine_problem implies robot_color = YELLOW;
+//
+//gar alw P_becomes_true_After_Q(robot_color = YELLOW, robot_at_origin);
+//
+//// After it reaches the initial location, the robot is turned green again, and it should continue its normal patrolling.
+//gar alw robot_at_origin implies robot_color = GREEN;
+//
+//// If an engine problem occurs, another one will not happen for at least 30 states.
+//gar trig [engine_problem] |=> [!engine_problem]{30,};
+
+

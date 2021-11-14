@@ -1,0 +1,1 @@
+<targetA[0]:1, targetA[1]:1, targetB[0]:0, targetB[1]:4, targetC[0]:2, targetC[1]:2, robotX:0, robotY:0, visited_origin:true, Zn:0>
