@@ -49,21 +49,35 @@ predicate at_origin(Coord x, Coord y):
 predicate fixed_inplace(Coord x, Coord y):
 	x = next(x) & y = next(y);
 	
-	
+
+// Color of origin	
 sys {RED, GREEN} color;
+
+// The progress represent the current targets that were already visited (the order is A->B->C)
 sys {A, AB, ABC} progress;
 
+// Fix the initial location of the robot at (0,0)
 gar ini robot_at_origin;
+
+// Initial progress is ABC because first target that should be visited is A.
 gar ini progress = ABC;
 
+// When finished a round and all targets were visited, the color of origin is turned to RED
 gar alw progress = ABC -> color = RED;
+
+// In the middle of a round, the color of origin is GREEN
 gar alw !(progress = ABC) -> color = GREEN;
 
+// Cause the robot to complete rounds infinitely
 gar alwEv at_targetA;
 
+// Enforce order:
+//progress A can change only to AB if target B is visited, or stay A if non target was visited
 gar alw progress = A implies (next(progress) = A & !next(at_targetA | at_targetB | at_targetC)) | 
 								(next(at_targetB) & next(progress) = AB);
+//progress AB can change only to ABC if target C is visited, or stay AB if non target was visited								
 gar alw progress = AB implies (next(progress) = AB & !next(at_targetA | at_targetB | at_targetC)) |
 								(next(at_targetC) & next(progress) = ABC);
+//progress ABC can change only to A if target A is visited, or stay ABC if non target was visited							
 gar alw progress = ABC implies (next(progress) = ABC & !next(at_targetA | at_targetB | at_targetC)) |
 								(next(at_targetA) & next(progress) = A);
