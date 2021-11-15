@@ -61,7 +61,10 @@ public class Board extends JPanel {
 		robot_yellow_image = ImageIO.read(new File("img/Yellow Robot.png"));
 
 		switch (cp.variant_num) {
-		case 1, 2:
+		case 1:
+			robot_image = robot_red_image;
+			break;
+		case 2:
 			robot_image = robot_red_image;
 			break;
 		case 3:
