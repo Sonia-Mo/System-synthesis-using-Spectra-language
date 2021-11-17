@@ -1,11 +1,11 @@
 import "./imports/DwyerPatternsNamed.spectra"
 
 spec Robot
-define Dim := 8;
+define Dim := 5;
 type robot_colors = {YELLOW, GREEN};
 type target_colors = {RED, GREEN};
 
-type Coord = Int(0..Dim);
+type Coord = Int(0..(Dim - 1));
 type Point = Coord[2];
 
 sys Coord robotX;
@@ -39,7 +39,7 @@ asm ini !at_origin(targetA[0], targetA[1]) &
 asm alw fixed_inplace(targetA[0], targetA[1]) &
 		fixed_inplace(targetB[0], targetB[1]) &
 		fixed_inplace(targetC[0], targetC[1]);
-
+		
 // Fix the initial location of the robot at (0,0)
 gar ini robot_at_origin;
 
@@ -56,9 +56,7 @@ gar alwEv at_targetB;
 gar alwEv at_targetC;
 
 //predicate on_obstacle(Coord x, Coord y):
-//	(x = 5 & y = 0) | (x = 1 & y = 1) | (x = 5 & y = 1) |
-//	(x = 3 & y = 3) | (x = 5 & y = 3) | (x = 2 & y = 5) |
-//	(x = 5 & y = 5) | (x = 3 & y = 7) | (x = 5 & y = 7);
+//	(x = 1 & y = 1) | (x = 2 & y = 1) | (x = 0 & y = 3) | (x = 3 & y = 3) | (x = 3 & y = 4);
 
 predicate at_origin(Coord x, Coord y):
 	x = 0 & y = 0;
@@ -73,7 +71,7 @@ gar ini targetC_color = GREEN;
 // A robot cannot visit a location while it is red.
 gar alw targetA_color = RED implies !next(at_targetA);
 gar alw targetB_color = RED implies !next(at_targetB);
-gar alw targetC_color = RED implies !next(at_targetB);
+gar alw targetC_color = RED implies !next(at_targetC);
 
 //When a robot visits a location, the location’s color is changed to red for between 3 to 5 turns. 
 gar trig [true]*[at_targetA] |=> [targetA_color = RED]{2,4}[targetA_color = GREEN];

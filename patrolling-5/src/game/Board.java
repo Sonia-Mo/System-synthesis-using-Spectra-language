@@ -34,6 +34,8 @@ public class Board extends JPanel {
 	BufferedImage obstacle_image;
 	BufferedImage origin_green_image;
 	BufferedImage origin_red_image;
+	BufferedImage target_green_image;
+	BufferedImage target_red_image;
 
 
 	public Board(ControlPanel cp) {
@@ -63,12 +65,16 @@ public class Board extends JPanel {
 			robots_images[i] = ImageIO.read(new File("img/Robot" + String.valueOf(i) + ".png"));			
 		}
 		
-		for (int i = 0; i < cp.goals.length; i++) {
-			goals_images[i] = ImageIO.read(new File("img/Goal1.png"));
-		}
-		
 		origin_red_image = ImageIO.read(new File("img/Red Starting Point.png"));
 		origin_green_image = ImageIO.read(new File("img/Green Starting Point.png"));
+		target_red_image = ImageIO.read(new File("img/Goal0.png"));
+		target_green_image = ImageIO.read(new File("img/Goal1.png"));
+		
+		for (int i = 0; i < cp.goals.length; i++) {
+			goals_images[i] = target_green_image;
+		}
+		
+
 	}
 
 	// Animate a transition (from robots_prev to robots)
@@ -189,29 +195,42 @@ public class Board extends JPanel {
 
 			g2d.setColor(Color.WHITE);
 			// g2d.drawImage(robot_image, temp, dim, null);
+			
 			// Draw goals
+			switch(cp.variant_num) {
+			case 2:
+				if (cp.v2_origin_color == game.Color.GREEN) {
+					g2d.drawImage(origin_green_image, 0, 0, null);
+				}
+				else if (cp.v2_origin_color == game.Color.RED) {
+					g2d.drawImage(origin_red_image, 0, 0, null);
+				}
+				break;
+			case 3:
+				for (int i = 0; i < cp.goals.length; i++) {
+					if(cp.v3_targets_color[i] == game.Color.GREEN) {
+						goals_images[i] = target_green_image;
+					}
+					else if(cp.v3_targets_color[i] == game.Color.RED) {
+						goals_images[i] = target_red_image;
+					}
+				}
+				break;
+			}
+			
 			for (int i = 0; i < cp.goals.length; i++) {
 				g2d.drawImage(goals_images[i], cp.goals[i].getX() * cp.dim, cp.goals[i].getY() * cp.dim, null);
 			}
+
 			// Draw robots
 			for (int i = 0; i < cp.num_robots; i++) {
 				g2d.drawImage(robots_images[i], robots_graphics[i].getX(), robots_graphics[i].getY(), null);
 			}
 			// Draw obstacles
-			for (int i = 0; i < cp.num_obstacles; i++) {
-				g2d.drawImage(obstacle_image, cp.obstacles[i].getX() * cp.dim, cp.obstacles[i].getY() * cp.dim, null);
-			}
+//			for (int i = 0; i < cp.num_obstacles; i++) {
+//				g2d.drawImage(obstacle_image, cp.obstacles[i].getX() * cp.dim, cp.obstacles[i].getY() * cp.dim, null);
+//			}
 			
-			switch(cp.variant_num) {
-			case 2:
-				if (cp.origin_color == game.Color.GREEN) {
-					g2d.drawImage(origin_green_image, 0, 0, null);
-				}
-				else if (cp.origin_color == game.Color.RED) {
-					g2d.drawImage(origin_red_image, 0, 0, null);
-				}
-			}
-
 		}
 	}
 

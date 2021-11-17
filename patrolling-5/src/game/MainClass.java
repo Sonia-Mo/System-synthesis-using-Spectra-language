@@ -38,7 +38,7 @@ public class MainClass {
 		obstacles[3] = new Point(3, 3);
 		obstacles[4] = new Point(3, 4);
 		
-		Point[] goals = new Point[num_targets];
+		Point[] goals = new Point[num_targets]; // i = 0: targetA; i = 1: targetB; i = 2: targetC;
 		
 		// Initialize set with all points that could not serve as targets
 		Set<Point> forbbiden_points = new HashSet<>();

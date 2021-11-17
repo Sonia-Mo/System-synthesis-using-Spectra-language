@@ -33,11 +33,13 @@ public class ControlPanel {
 	int num_robots;
 	int num_obstacles;
 	int variant_num;
-	Color origin_color;
-	
+	Color v2_origin_color;
+	Color[] v3_targets_color; // i = 0: targetA; i = 1: targetB; i = 2: targetC;
+//	Color v3_robot_color;
+
 	Point[] robots;
 	Point[] obstacles;
-	Point[] goals;
+	Point[] goals; // i = 0: targetA; i = 1: targetB; i = 2: targetC;
 	
 	// holds the robots previous position (for use when animating transitions)
 	Point[] robots_prev = new Point[num_robots];
@@ -83,7 +85,7 @@ public class ControlPanel {
 		// init controller
 		executor = new ControllerExecutor(new BasicJitController(), this.path);
 		
-		// TODO: Choose targets randomly
+		// Choose targets randomly
 		inputs.put("targetA[0]", Integer.toString(goals[0].getX()));
 		inputs.put("targetA[1]", Integer.toString(goals[0].getY()));
 		inputs.put("targetB[0]", Integer.toString(goals[1].getX()));
@@ -104,8 +106,15 @@ public class ControlPanel {
 		}
 		
 		switch (this.variant_num) {
+		case 1:
+		case 3:
+			v3_targets_color = new Color[goals.length];
+			for (int i = 0; i < num_robots; i++) {
+				this.v3_targets_color[i] = Color.GREEN;
+			}
+			break;
 		case 2: 
-			this.origin_color = Color.RED;
+			this.v2_origin_color = Color.RED;
 			break;
 		}
 
@@ -133,9 +142,16 @@ public class ControlPanel {
 		
 		switch (this.variant_num) {
 		case 2: 
-			this.origin_color = Color.valueOf(sysValues.get("color"));
+			this.v2_origin_color = Color.valueOf(sysValues.get("color"));
+			break;
+		case 3: 
+			this.v3_targets_color[0] = Color.valueOf(sysValues.get("targetA_color"));
+			this.v3_targets_color[1] = Color.valueOf(sysValues.get("targetB_color"));
+			this.v3_targets_color[2] = Color.valueOf(sysValues.get("targetC_color"));
+//			this.v3_robot_color = Color.valueOf(sysValues.get("robot_color"));
 			break;
 		}
+		
 		// Animate transition
 		board.animate();
 	}
