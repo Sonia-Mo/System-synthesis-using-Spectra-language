@@ -23,86 +23,92 @@ public class Board extends JPanel {
 
 	// The robots current, start, and target locations for a single transition
 	// - used for animation
-	Point[] robots_graphics;
-	Point[] start_graphics;
-	Point[] target_graphics;
+	Point robot_graphics;
+	Point start_graphics;
+	Point target_graphics;
 
 	BufferedImage buffer;
-	BufferedImage[] robots_images;
+	BufferedImage robot_image;
+	BufferedImage robot_green_image;
+	BufferedImage robot_yellow_image;
+	BufferedImage robot_red_image;
 	BufferedImage[] goals_images;
-	BufferedImage[] base_robot_images;
+	BufferedImage base_robot_images;
 	BufferedImage obstacle_image;
 	BufferedImage origin_green_image;
 	BufferedImage origin_red_image;
-
+	BufferedImage target_green_image;
+	BufferedImage target_red_image;
 
 	public Board(ControlPanel cp) {
 		super();
 		this.cp = cp;
-		robots_graphics = new Point[cp.num_robots];
-		start_graphics = new Point[cp.num_robots];
-		target_graphics = new Point[cp.num_robots];
-		robots_images = new BufferedImage[cp.num_robots];
-		base_robot_images = new BufferedImage[cp.num_robots];
 		goals_images = new BufferedImage[cp.goals.length];
 
 	}
 
 	public void init() throws Exception {
-		for (int i = 0; i < cp.num_robots; i++) {
-			start_graphics[i] = new Point();
-			target_graphics[i] = new Point();
-			robots_graphics[i] = new Point();
-		}
+		start_graphics = new Point();
+		target_graphics = new Point();
+		robot_graphics = new Point();
 
 		obstacle_image = ImageIO.read(new File("img/Obstacle.png"));
 
 		// Load images for different elements
-		for (int i = 0; i < cp.num_robots; i++) {
-			base_robot_images[i] = ImageIO.read(new File("img/Robot" + String.valueOf(i) + ".png"));
-			robots_images[i] = ImageIO.read(new File("img/Robot" + String.valueOf(i) + ".png"));			
+		base_robot_images = ImageIO.read(new File("img/Robot0.png"));
+		robot_red_image = ImageIO.read(new File("img/Robot0.png"));
+		robot_green_image = ImageIO.read(new File("img/Robot1.png"));
+		robot_yellow_image = ImageIO.read(new File("img/Yellow Robot.png"));
+
+		switch (cp.variant_num) {
+		case 1, 2:
+			robot_image = robot_red_image;
+			break;
+		case 3:
+			robot_image = robot_green_image;
+			break;
 		}
-		
-		for (int i = 0; i < cp.goals.length; i++) {
-			goals_images[i] = ImageIO.read(new File("img/Goal1.png"));
-		}
-		
+
 		origin_red_image = ImageIO.read(new File("img/Red Starting Point.png"));
 		origin_green_image = ImageIO.read(new File("img/Green Starting Point.png"));
+		target_red_image = ImageIO.read(new File("img/Goal0.png"));
+		target_green_image = ImageIO.read(new File("img/Goal1.png"));
+
+		for (int i = 0; i < cp.goals.length; i++) {
+			goals_images[i] = target_green_image;
+		}
 	}
 
 	// Animate a transition (from robots_prev to robots)
 	public void animate() throws Exception {
-		for (int i = 0; i < cp.num_robots; i++) {
-			int diff_x = cp.robots[i].getX() - cp.robots_prev[i].getX();
-			int diff_y = cp.robots[i].getY() - cp.robots_prev[i].getY();
-			// rotate robots based on direction
-			switch (diff_x) {
-			case -1:
-				robots_images[i] = Utility.rotate(base_robot_images[i], 3 * Math.PI / 2);
-				break;
-			case 1:
-				robots_images[i] = Utility.rotate(base_robot_images[i], Math.PI / 2);
-				break;
-			}
-			switch (diff_y) {
-			case -1:
-				robots_images[i] = Utility.rotate(base_robot_images[i], 0);
-				break;
-			case 1:
-				robots_images[i] = Utility.rotate(base_robot_images[i], Math.PI);
-				break;
-			}
+
+		int diff_x = cp.robot.getX() - cp.robot_prev.getX();
+		int diff_y = cp.robot.getY() - cp.robot_prev.getY();
+		// rotate robots based on direction
+		switch (diff_x) {
+		case -1:
+			robot_image = Utility.rotate(base_robot_images, 3 * Math.PI / 2);
+			break;
+		case 1:
+			robot_image = Utility.rotate(base_robot_images, Math.PI / 2);
+			break;
+		}
+		switch (diff_y) {
+		case -1:
+			robot_image = Utility.rotate(base_robot_images, 0);
+			break;
+		case 1:
+			robot_image = Utility.rotate(base_robot_images, Math.PI);
+			break;
 		}
 
-		for (int i = 0; i < cp.num_robots; i++) {
-			robots_graphics[i].setX(cp.robots_prev[i].getX() * cp.dim);
-			robots_graphics[i].setY(cp.robots_prev[i].getY() * cp.dim);
-			start_graphics[i].setX(cp.robots_prev[i].getX() * cp.dim);
-			start_graphics[i].setY(cp.robots_prev[i].getY() * cp.dim);
-			target_graphics[i].setX(cp.robots[i].getX() * cp.dim);
-			target_graphics[i].setY(cp.robots[i].getY() * cp.dim);
-		}
+		robot_graphics.setX(cp.robot_prev.getX() * cp.dim);
+		robot_graphics.setY(cp.robot_prev.getY() * cp.dim);
+		start_graphics.setX(cp.robot_prev.getX() * cp.dim);
+		start_graphics.setY(cp.robot_prev.getY() * cp.dim);
+		target_graphics.setX(cp.robot.getX() * cp.dim);
+		target_graphics.setY(cp.robot.getY() * cp.dim);
+
 		// Each tick of the timer advances the animation
 		timer = new Timer(16, new ActionListener() {
 			@Override
@@ -126,16 +132,13 @@ public class Board extends JPanel {
 					return;
 				}
 				// Update robot location for current animation step
-				for (int i = 0; i < cp.num_robots; i++) {
-					robots_graphics[i]
-							.setX((int) (start_graphics[i].getX() * (1 - (double) (animation_steps) / num_steps)
-									+ target_graphics[i].getX() * ((double) (animation_steps) / num_steps)));
-					robots_graphics[i]
-							.setY((int) (start_graphics[i].getY() * (1 - (double) (animation_steps) / num_steps)
-									+ target_graphics[i].getY() * ((double) (animation_steps) / num_steps)));
-				}
+				robot_graphics.setX((int) (start_graphics.getX() * (1 - (double) (animation_steps) / num_steps)
+						+ target_graphics.getX() * ((double) (animation_steps) / num_steps)));
+				robot_graphics.setY((int) (start_graphics.getY() * (1 - (double) (animation_steps) / num_steps)
+						+ target_graphics.getY() * ((double) (animation_steps) / num_steps)));
+
 				animation_steps++;
-				// Redraw	
+				// Redraw
 				updateBuffer();
 				repaint();
 			}
@@ -189,27 +192,42 @@ public class Board extends JPanel {
 
 			g2d.setColor(Color.WHITE);
 			// g2d.drawImage(robot_image, temp, dim, null);
+
 			// Draw goals
-			for (int i = 0; i < cp.goals.length; i++) {
-				g2d.drawImage(goals_images[i], cp.goals[i].getX() * cp.dim, cp.goals[i].getY() * cp.dim, null);
-			}
-			// Draw robots
-			for (int i = 0; i < cp.num_robots; i++) {
-				g2d.drawImage(robots_images[i], robots_graphics[i].getX(), robots_graphics[i].getY(), null);
-			}
-			// Draw obstacles
-			for (int i = 0; i < cp.num_obstacles; i++) {
-				g2d.drawImage(obstacle_image, cp.obstacles[i].getX() * cp.dim, cp.obstacles[i].getY() * cp.dim, null);
-			}
-			
-			switch(cp.variant_num) {
+			switch (cp.variant_num) {
 			case 2:
 				if (cp.origin_color == game.Color.GREEN) {
 					g2d.drawImage(origin_green_image, 0, 0, null);
-				}
-				else if (cp.origin_color == game.Color.RED) {
+				} else if (cp.origin_color == game.Color.RED) {
 					g2d.drawImage(origin_red_image, 0, 0, null);
 				}
+				break;
+			case 3:
+				for (int i = 0; i < cp.goals.length; i++) {
+					if (cp.targets_color[i] == game.Color.GREEN) {
+						goals_images[i] = target_green_image;
+					} else if (cp.targets_color[i] == game.Color.RED) {
+						goals_images[i] = target_red_image;
+					}
+				}
+				if (cp.engine_problem == true) {
+					robot_image = robot_yellow_image;
+				} else {
+					robot_image = robot_green_image;
+				}
+				break;
+			}
+
+			for (int i = 0; i < cp.goals.length; i++) {
+				g2d.drawImage(goals_images[i], cp.goals[i].getX() * cp.dim, cp.goals[i].getY() * cp.dim, null);
+			}
+
+			// Draw robots
+			g2d.drawImage(robot_image, robot_graphics.getX(), robot_graphics.getY(), null);
+
+			// Draw obstacles
+			for (int i = 0; i < cp.num_obstacles; i++) {
+				g2d.drawImage(obstacle_image, cp.obstacles[i].getX() * cp.dim, cp.obstacles[i].getY() * cp.dim, null);
 			}
 
 		}

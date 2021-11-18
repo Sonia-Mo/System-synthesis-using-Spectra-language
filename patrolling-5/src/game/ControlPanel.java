@@ -34,13 +34,16 @@ public class ControlPanel {
 	int num_obstacles;
 	int variant_num;
 	Color origin_color;
-	
-	Point[] robots;
+	Color[] targets_color; // i = 0: targetA; i = 1: targetB; i = 2: targetC;
+	int engine_cooldown_counter;
+	boolean engine_problem;
+
+	Point robot;
 	Point[] obstacles;
-	Point[] goals;
+	Point[] goals; // i = 0: targetA; i = 1: targetB; i = 2: targetC;
 	
 	// holds the robots previous position (for use when animating transitions)
-	Point[] robots_prev = new Point[num_robots];
+	Point robot_prev;
 
 	// Board and GUI elements
 	JFrame frame;
@@ -59,14 +62,11 @@ public class ControlPanel {
 	// The path to the controller files
 	String path;
 
-	public ControlPanel(int x, int y, int num_robots, Point[] obstacles, Point[] goals, String path, int variant_num) {
+	public ControlPanel(int x, int y, Point[] obstacles, Point[] goals, String path, int variant_num) {
 		this.x = x;
 		this.y = y;
-		this.num_robots = num_robots;
 		this.num_obstacles = obstacles.length;
 		this.variant_num = variant_num;
-		this.robots = new Point[num_robots];
-		this.robots_prev = new Point[num_robots];
 		this.obstacles = obstacles;
 		this.goals = goals;
 		this.path = path;
@@ -75,15 +75,13 @@ public class ControlPanel {
 	public void init() throws Exception {
 		autorun = false;
 
-		for (int i = 0; i < num_robots; i++) {
-			robots[i] = new Point();
-			robots_prev[i] = new Point();
-		}
-
+		robot = new Point();
+		robot_prev = new Point();
+		
 		// init controller
 		executor = new ControllerExecutor(new BasicJitController(), this.path);
 		
-		// TODO: Choose targets randomly
+		// Choose targets randomly
 		inputs.put("targetA[0]", Integer.toString(goals[0].getX()));
 		inputs.put("targetA[1]", Integer.toString(goals[0].getY()));
 		inputs.put("targetB[0]", Integer.toString(goals[1].getX()));
@@ -91,51 +89,88 @@ public class ControlPanel {
 		inputs.put("targetC[0]", Integer.toString(goals[2].getX()));
 		inputs.put("targetC[1]", Integer.toString(goals[2].getY()));
 		
-		executor.initState(inputs);
-
-		Map<String, String> sysValues = executor.getCurrOutputs();
-
-		// set initial robot locations
-		for (int i = 0; i < num_robots; i++) {
-			robots_prev[i].setX(Integer.parseInt(sysValues.get("robotX")));
-			robots_prev[i].setY(Integer.parseInt(sysValues.get("robotY")));
-			robots[i].setX(Integer.parseInt(sysValues.get("robotX")));
-			robots[i].setY(Integer.parseInt(sysValues.get("robotY")));
-		}
 		
 		switch (this.variant_num) {
 		case 2: 
+			// Set initial origin color
 			this.origin_color = Color.RED;
 			break;
+		case 3:
+			// No engine problem at the beginning of the run
+			engine_problem = false;
+			inputs.put("engine_problem", Boolean.toString(engine_problem));
+			engine_cooldown_counter = 15;
+			break;
+		}
+
+		executor.initState(inputs);
+
+		Map<String, String> sysValues = executor.getCurrOutputs();
+		
+		// Set initial robot locations
+		robot_prev.setX(Integer.parseInt(sysValues.get("robotX")));
+		robot_prev.setY(Integer.parseInt(sysValues.get("robotY")));
+		robot.setX(Integer.parseInt(sysValues.get("robotX")));
+		robot.setY(Integer.parseInt(sysValues.get("robotY")));
+		
+		targets_color = new Color[goals.length];
+		for (int i = 0; i < targets_color.length; i++) {
+			this.targets_color[i] = Color.GREEN;
 		}
 
 		setUpUI();
 	}
 
-	// handle next turn
+	// Handle next turn
 	void next() throws Exception {
 		ready_for_next = false;
 		advance_button.setText("...");
-		for (int i = 0; i < num_robots; i++) {
-			robots_prev[i].setX(robots[i].getX());
-			robots_prev[i].setY(robots[i].getY());
+		robot_prev.setX(robot.getX());
+		robot_prev.setY(robot.getY());
+		
+		switch(variant_num) {
+		case 3:
+			// Keep engine problem true if robot is still not at origin.
+			if (engine_problem && !(robot_prev.getX() == 0 && robot_prev.getY() == 0)) {
+				engine_problem = true;
+			// Reset engine cooldown counter and turn off engine problem if robot got to origin.
+			} else if (engine_problem && robot_prev.getX() == 0 && robot_prev.getY() == 0) {
+				engine_cooldown_counter = 0;
+				engine_problem = false;
+			// Keep engine problem false while engine cooldown is less than 15. 
+			} else if (!engine_problem && engine_cooldown_counter < 15) {
+				engine_problem = false;	
+				engine_cooldown_counter++; 
+			// In case that engine problem is false and engine cooldown is greater than 14, randomize next value of engine problem.
+			} else {
+				Random random = new Random();
+				engine_problem = random.nextBoolean();
+			}
+			inputs.put("engine_problem", Boolean.toString(engine_problem));		
+			break;
 		}
+
 		executor.updateState(inputs);
 
 		// Receive updated values from the controller
 		Map<String, String> sysValues = executor.getCurrOutputs();
-
-		// Update robot locations
-		for (int i = 0; i < num_robots; i++) {
-			robots[i].setX(Integer.parseInt(sysValues.get("robotX")));
-			robots[i].setY(Integer.parseInt(sysValues.get("robotY")));
-		}
 		
-		switch (this.variant_num) {
+		// Update robot locations
+		robot.setX(Integer.parseInt(sysValues.get("robotX")));
+		robot.setY(Integer.parseInt(sysValues.get("robotY")));
+	
+		
+		switch (variant_num) {
 		case 2: 
 			this.origin_color = Color.valueOf(sysValues.get("color"));
 			break;
+		case 3: 
+			this.targets_color[0] = Color.valueOf(sysValues.get("targetA_color"));
+			this.targets_color[1] = Color.valueOf(sysValues.get("targetB_color"));
+			this.targets_color[2] = Color.valueOf(sysValues.get("targetC_color"));
+			break;
 		}
+		
 		// Animate transition
 		board.animate();
 	}

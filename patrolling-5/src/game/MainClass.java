@@ -27,7 +27,6 @@ public class MainClass {
 
 		int x = 5;
 		int y = 5;
-		int num_robots = 1;
 		final int num_obstacles = 5;
 		final int num_targets = 3;
 
@@ -38,7 +37,7 @@ public class MainClass {
 		obstacles[3] = new Point(3, 3);
 		obstacles[4] = new Point(3, 4);
 		
-		Point[] goals = new Point[num_targets];
+		Point[] goals = new Point[num_targets]; // i = 0: targetA; i = 1: targetB; i = 2: targetC;
 		
 		// Initialize set with all points that could not serve as targets
 		Set<Point> forbbiden_points = new HashSet<>();
@@ -63,7 +62,7 @@ public class MainClass {
 		String path = "out//";
 
 		System.out.println("Running the system");
-		cp = new ControlPanel(x, y, num_robots, obstacles, goals, path, variant_num);
+		cp = new ControlPanel(x, y, obstacles, goals, path, variant_num);
 		cp.init();
 
 	}

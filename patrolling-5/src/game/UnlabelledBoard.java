@@ -12,18 +12,17 @@ public class UnlabelledBoard extends Board {
 
 	@Override
 	public void init() throws Exception {
-		for (int i = 0; i < cp.num_robots; i++) {
-			start_graphics[i] = new Point();
-			target_graphics[i] = new Point();
-			robots_graphics[i] = new Point();
-		}
+		start_graphics = new Point();
+		target_graphics = new Point();
+		robot_graphics = new Point();
+		
 
 		obstacle_image = ImageIO.read(new File("img/Obstacle.png"));
 
 		// Unlabelled: Use the same image for all robots/goals
-		for (int i = 0; i < cp.num_robots; i++) {
-			base_robot_images[i] = ImageIO.read(new File("img/Robot" + String.valueOf(0) + ".png"));
-			robots_images[i] = ImageIO.read(new File("img/Robot" + String.valueOf(0) + ".png"));
+		base_robot_images = ImageIO.read(new File("img/Robot0.png"));
+		robot_image = ImageIO.read(new File("img/Robot0.png"));
+		for (int i = 0; i < goals_images.length; i++) {
 			goals_images[i] = ImageIO.read(new File("img/Goal" + String.valueOf(0) + ".png"));
 		}
 	}
