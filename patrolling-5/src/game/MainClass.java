@@ -11,7 +11,6 @@ import tau.smlab.syntech.controller.jit.BasicJitController;
 
 public class MainClass {
 	public static void main(String args[]) throws Exception {
-		
 		// Read variant_num from the programs arguments with default value set to 1.
 		int variant_num;
 		try {
@@ -44,7 +43,10 @@ public class MainClass {
 		for (int i = 0; i < num_obstacles; i++) {
 			forbbiden_points.add(obstacles[i]);
 		}
+		// targets cannot be located on origin or (4,4) due to unrealizability.
 		forbbiden_points.add(new Point(0,0));
+		forbbiden_points.add(new Point(4,4)); 
+
 
 		// Choose targets randomly
 		Random rand = new Random();
@@ -57,6 +59,7 @@ public class MainClass {
 			goals[i] = rand_target;
 			forbbiden_points.add(rand_target);
 		}
+		
 		
 		ControlPanel cp;
 		String path = "out//";
