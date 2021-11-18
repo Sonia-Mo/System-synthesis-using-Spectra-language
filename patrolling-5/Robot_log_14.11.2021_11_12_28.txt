@@ -1,3 +1,0 @@
-<targetA[0]:2, targetA[1]:1, targetB[0]:2, targetB[1]:3, targetC[0]:3, targetC[1]:1, robotX:0, robotY:0, visited_origin:true, SYS_CONSTRAINT.285.P_becomes_true_between_Q_and_R.state:S0, Zn:0>
-<targetA[0]:2, targetA[1]:1, targetB[0]:2, targetB[1]:3, targetC[0]:3, targetC[1]:1, robotX:1, robotY:1, visited_origin:false, SYS_CONSTRAINT.285.P_becomes_true_between_Q_and_R.state:S0, Zn:0>
-<targetA[0]:2, targetA[1]:1, targetB[0]:2, targetB[1]:3, targetC[0]:3, targetC[1]:1, robotX:2, robotY:1, visited_origin:false, SYS_CONSTRAINT.285.P_becomes_true_between_Q_and_R.state:S0, Zn:0>

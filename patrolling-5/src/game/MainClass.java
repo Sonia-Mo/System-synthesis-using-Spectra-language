@@ -27,7 +27,6 @@ public class MainClass {
 
 		int x = 5;
 		int y = 5;
-		int num_robots = 1;
 		final int num_obstacles = 5;
 		final int num_targets = 3;
 
@@ -63,7 +62,7 @@ public class MainClass {
 		String path = "out//";
 
 		System.out.println("Running the system");
-		cp = new ControlPanel(x, y, num_robots, obstacles, goals, path, variant_num);
+		cp = new ControlPanel(x, y, obstacles, goals, path, variant_num);
 		cp.init();
 
 	}
