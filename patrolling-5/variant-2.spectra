@@ -76,9 +76,6 @@ gar ini first_target = NONE;
 // Both variables are NONE together and are not NONE together
 gar alw first_target = NONE <-> current_target = NONE;
 
-// The first state were first_target changes from NONE to something else, the color is turned GREEN.
-gar alw first_target != NONE & PREV(first_target = NONE) -> origin_color = GREEN;
-
 // Once a target was visited, first target cannot be NONE.
 gar alw ONCE(at_targetA | at_targetB | at_targetC) -> first_target != NONE;
 
