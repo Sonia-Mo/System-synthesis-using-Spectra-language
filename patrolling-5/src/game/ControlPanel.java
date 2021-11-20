@@ -162,7 +162,7 @@ public class ControlPanel {
 		
 		switch (variant_num) {
 		case 2: 
-			this.origin_color = Color.valueOf(sysValues.get("color"));
+			this.origin_color = Color.valueOf(sysValues.get("origin_color"));
 			break;
 		case 3: 
 			this.targets_color[0] = Color.valueOf(sysValues.get("targetA_color"));
