@@ -5,6 +5,7 @@ define Dim := 8;
 define robot_at_origin := at_origin(robotX, robotY);
 define at_target := robotX = target[0] & robotY = target[1];
 
+type Rotation = {DEG_0, DEG_90, DEG_180, DEG_270};
 type Coord = Int(0..(Dim - 1));
  
 sys Coord robotX;
@@ -43,7 +44,22 @@ gar alw move_vertically() | move_horizontally() | stay();
 // *********************************************
 // ***          Property #1                  ***
 // *********************************************
-//TODO: Implement
+
+sys Rotation robot_rotation;
+
+// When the robot reaches the orange zone, it starts its rotation from 0 degrees
+gar alw !at_orange_zone() & next(at_orange_zone()) -> next(robot_rotation) = DEG_0;
+
+// Whenever the robot reaches the orange zone, it repeatedly switches its usual appearance
+// Its appearance rotates 90 degrees to the right at each step, until it leaves the orange zone
+gar alw at_orange_zone() & next(at_orange_zone()) & robot_rotation = DEG_0 -> next(robot_rotation) = DEG_90;
+gar alw at_orange_zone() & next(at_orange_zone()) & robot_rotation = DEG_90 -> next(robot_rotation) = DEG_180;
+gar alw at_orange_zone() & next(at_orange_zone()) & robot_rotation = DEG_180 -> next(robot_rotation) = DEG_270;
+gar alw at_orange_zone() & next(at_orange_zone()) & robot_rotation = DEG_270 -> next(robot_rotation) = DEG_0;
+
+predicate at_orange_zone():
+	(robotX >= 1 & robotX <= 5) & (robotY = 0 | robotY = 2 | robotY = 3 | robotY = 5 | robotY = 6);
+
 // *********************************************
 // ***          Property #2                  ***
 // *********************************************
@@ -51,8 +67,18 @@ gar alw move_vertically() | move_horizontally() | stay();
 // *********************************************
 // ***          Property #6                  ***
 // *********************************************
-//TODO: Implement
 
+asm alwEv greenLight;
+
+// The robot should stay at origin in the first 8 states of its execution
+// Then it should start moving only when there is green light
+gar alw next(robot_at_origin) | ONCE(initial_wait_count = 8 and greenLight);
+
+counter initial_wait_count (0..8) {
+	initial_wait_count = 0;
+	inc: true;
+	overflow: keep;
+}
 
 // *********************************************
 // ***          Predicates                  ***
