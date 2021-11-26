@@ -1,0 +1,29 @@
+import "./imports/DwyerPatternsNamed.spectra"
+spec Cleaner
+
+define DX := 7;
+define DY := 7;
+type DimX = Int(0..DX);
+type DimY = Int(0..DY);
+ 
+sys DimX robotX;
+sys DimY robotY;
+env boolean greenLight;
+
+
+// *********************************************
+// ***      General Task Requirements        ***
+// *********************************************
+//TODO: Implement
+// *********************************************
+// ***          Property #1                  ***
+// *********************************************
+//TODO: Implement
+// *********************************************
+// ***          Property #2                  ***
+// *********************************************
+//TODO: Implement
+// *********************************************
+// ***          Property #6                  ***
+// *********************************************
+//TODO: Implement
