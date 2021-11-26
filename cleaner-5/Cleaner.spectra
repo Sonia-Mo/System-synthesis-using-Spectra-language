@@ -63,7 +63,32 @@ predicate at_orange_zone():
 // *********************************************
 // ***          Property #2                  ***
 // *********************************************
-//TODO: Implement
+
+
+// Represents the number of consecutive states the robot have been on the orange zone
+sys Int(0..7) orange_steps;
+
+// counter resets when the robot is out of the orange zone.
+gar alw orange_steps != 0 <-> at_orange_zone();
+
+// If robot has been at the orange zone for 5 or 6 consecutive states then it should stay in place in the next state
+gar alw orange_steps = 5 | orange_steps = 6 -> stay();
+
+/* Defining orange_steps transitions and robot's movement:
+ 	* Inc orange_steps if robot is at the orange zone in the next state and its current value is less then 7.
+ 	* Robot can move out of the orange zone if orange_steps < 5.
+ 	* When orange_steps = 7 and there is no green light then orange_steps remains 7 and the robot stays in place.
+ 	* When orange_steps = 7 and there is a green light then the counter resets to 0 if the robot moves
+ 	* out of the orange zone or to 1 if it stays inside the orange zone.
+ 	* Robot can move freely when it is out of the orange zone.
+ */
+gar alw orange_steps < 7 & next(at_orange_zone()) & next(orange_steps) = orange_steps + 1 |
+		orange_steps < 5 & !next(at_orange_zone()) | 
+		orange_steps = 7 & !greenLight & next(orange_steps) = 7 & stay() |
+		orange_steps = 7 & greenLight & (!next(at_orange_zone()) | (next(orange_steps) = 1)) | 
+		!at_orange_zone() & !next(at_orange_zone());
+		
+
 // *********************************************
 // ***          Property #6                  ***
 // *********************************************
