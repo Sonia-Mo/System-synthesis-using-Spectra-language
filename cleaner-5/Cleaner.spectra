@@ -70,12 +70,12 @@ predicate at_orange_zone():
 
 asm alwEv greenLight;
 
-// The robot should stay at origin in the first 8 states of its execution
-// Then it should start moving only when there is green light
-gar alw next(robot_at_origin) | ONCE(initial_wait_count = 8 and greenLight);
-
-counter initial_wait_count (0..8) {
-	initial_wait_count = 0;
+gar alw waiting_steps < 8 -> robot_at_origin;
+gar alw HISTORICALLY(waiting_steps < 8 | waiting_steps = 8 & !greenLight) & next(robot_at_origin) |
+		ONCE(waiting_steps = 8 & greenLight);
+		
+counter waiting_steps (0..8) {
+	waiting_steps = 0;
 	inc: true;
 	overflow: keep;
 }
