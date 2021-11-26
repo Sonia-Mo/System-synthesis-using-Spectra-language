@@ -1,20 +1,45 @@
 import "./imports/DwyerPatternsNamed.spectra"
 spec Cleaner
 
-define DX := 7;
-define DY := 7;
-type DimX = Int(0..DX);
-type DimY = Int(0..DY);
+define Dim := 8;
+define robot_at_origin := at_origin(robotX, robotY);
+define at_target := robotX = target[0] & robotY = target[1];
+
+type Coord = Int(0..(Dim - 1));
  
-sys DimX robotX;
-sys DimY robotY;
+sys Coord robotX;
+sys Coord robotY;
+
+// Environment variable which indicates if a target should be cleaned
+// In case cleaning_request = false ignore target variable
+env boolean cleaning_request;
+env Coord[2] target;
+
 env boolean greenLight;
-
-
+		
 // *********************************************
 // ***      General Task Requirements        ***
 // *********************************************
-//TODO: Implement
+
+// If there is a cleaning request from a target, the robot should eventually visit it
+gar trig [true]*[cleaning_request & !at_target] |=> [!at_target]*[at_target];
+
+// A cleaning target can be any cell that is not (0,0) and not an obstacle
+asm alw !on_obstacle(target[0], target[1]) & !at_origin(target[0], target[1]);
+
+// As long as the robot hasn't reached the target, target's location is not changed and cleaning request remains true
+// If left condition doesn't hold, the value of cleaning request is determined (randomly) by the environment
+asm alw cleaning_request & !at_target -> fixed_inplace(target[0], target[1]) & next(cleaning_request);
+
+// Fix the initial location of the robot at (0,0)
+gar ini robot_at_origin;
+
+// Make sure robot doesn't walk over obstacles
+gar alw !on_obstacle(robotX, robotY);	
+	 
+// The robot can move to adjacent cells horizontally or vertically, but not diagonally
+gar alw move_vertically() | move_horizontally() | stay();
+	
 // *********************************************
 // ***          Property #1                  ***
 // *********************************************
@@ -27,3 +52,27 @@ env boolean greenLight;
 // ***          Property #6                  ***
 // *********************************************
 //TODO: Implement
+
+
+// *********************************************
+// ***          Predicates                  ***
+// *********************************************
+predicate on_obstacle(Coord x, Coord y):
+	(x = 1 & y = 1) | (x = 2 & y = 1) | (x = 3 & y = 1) | (x = 4 & y = 1) | (x = 5 & y = 1) | 
+	(x = 1 & y = 4) | (x = 2 & y = 4) | (x = 3 & y = 4) | (x = 4 & y = 4) | (x = 5 & y = 4) |
+	(x = 1 & y = 7) | (x = 4 & y = 7);
+
+predicate at_origin(Coord x, Coord y):
+	x = 0 & y = 0;
+
+predicate fixed_inplace(Coord x, Coord y):
+	x = next(x) & y = next(y);
+	
+predicate move_vertically():
+	(next(robotY) = robotY - 1 | next(robotY) = robotY + 1) & next(robotX) = robotX;
+	
+predicate move_horizontally():
+	(next(robotX) = robotX - 1 | next(robotX) = robotX + 1) & next(robotY) = robotY;
+
+predicate stay():
+	fixed_inplace(robotX, robotY);
