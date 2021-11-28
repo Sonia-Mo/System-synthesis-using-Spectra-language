@@ -19,7 +19,7 @@ define at_target := robotX = target[0] & robotY = target[1];
 // In case cleaning_request = false ignore target variable
 env boolean cleaning_request;
 
-env boolean greenLight;
+env boolean green_light;
 
 // A cleaning target can be any cell that is not (0,0) and not an obstacle
 asm alw !on_obstacle(target[0], target[1]) & !at_origin(target[0], target[1]);
@@ -78,21 +78,21 @@ gar alw orange_steps = 5 | orange_steps = 6 -> stay();
 gar alw orange_steps < 7 -> next(orange_steps) = orange_steps + 1 | next(orange_steps) = 0;
 
 // If orange_steps = 7 and there isn't a green light then it should not change and the robot should stay in place
-gar alw orange_steps = 7 & !greenLight -> next(orange_steps) = 7 & stay();
+gar alw orange_steps = 7 & !green_light -> next(orange_steps) = 7 & stay();
 
 // If orange_steps = 7 and there is a green light then orange_steps should be reseted and the robot can 
 // start moving again (if robot moves out of the orange zone orange_steps is set to 0 and otherwise to 1)
-gar alw orange_steps = 7 & greenLight -> next(orange_steps) = 0 | next(orange_steps) = 1;
+gar alw orange_steps = 7 & green_light -> next(orange_steps) = 0 | next(orange_steps) = 1;
 
 // *********************************************
 // ***          Property #6                  ***
 // *********************************************
 
-asm alwEv greenLight;
+asm alwEv green_light;
 
 // The robot should stay at origin in the first 8 states of its execution
 // Then it should start moving only when there is green light
-gar alw next(robot_at_origin) | ONCE(initial_wait_count = 8 and greenLight);
+gar alw next(robot_at_origin) | ONCE(initial_wait_count = 8 and green_light);
 
 counter initial_wait_count (0..8) {
 	initial_wait_count = 0;

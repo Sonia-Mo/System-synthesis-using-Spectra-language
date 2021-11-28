@@ -6,8 +6,10 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
 import javax.swing.JButton;
@@ -20,7 +22,7 @@ import tau.smlab.syntech.controller.jit.BasicJitController;
  * Manages the simulation - GUI, controller input/output, board (visualization)
  */
 
-enum Color {RED, GREEN, YELLOW}
+enum Color {RED, GREEN, YELLOW, BLUE}
 
 public class ControlPanel {
 	// board dimensions
@@ -30,17 +32,17 @@ public class ControlPanel {
 	final int dim = 100;
 	static final int y_offset = 30;
 	
-	int num_robots;
 	int num_obstacles;
-	int variant_num;
-	Color origin_color;
-	Color[] targets_color; // i = 0: targetA; i = 1: targetB; i = 2: targetC;
-	int engine_cooldown_counter;
-	boolean engine_problem;
+	Color robot_color;
+	boolean green_light;
+	boolean cleaning_request;
+	Set<Point> forbbiden_points = new HashSet<>();
+	Random rand = new Random();
 
 	Point robot;
 	Point[] obstacles;
-	Point[] goals; // i = 0: targetA; i = 1: targetB; i = 2: targetC;
+	// TODO: check if initialization is required
+	Point target = new Point();
 	
 	// holds the robots previous position (for use when animating transitions)
 	Point robot_prev;
@@ -62,14 +64,19 @@ public class ControlPanel {
 	// The path to the controller files
 	String path;
 
-	public ControlPanel(int x, int y, Point[] obstacles, Point[] goals, String path, int variant_num) {
+	public ControlPanel(int x, int y, Point[] obstacles, String path) {
 		this.x = x;
 		this.y = y;
 		this.num_obstacles = obstacles.length;
-		this.variant_num = variant_num;
 		this.obstacles = obstacles;
-		this.goals = goals;
 		this.path = path;
+		
+		// Initialize set with all points that could not serve as target
+		for (int i = 0; i < num_obstacles; i++) {
+			forbbiden_points.add(obstacles[i]);
+		}
+		// Target cannot be located at origin
+		forbbiden_points.add(new Point(0,0));
 	}
 
 	public void init() throws Exception {
@@ -81,27 +88,16 @@ public class ControlPanel {
 		// init controller
 		executor = new ControllerExecutor(new BasicJitController(), this.path);
 		
-		// Choose targets randomly
-		inputs.put("targetA[0]", Integer.toString(goals[0].getX()));
-		inputs.put("targetA[1]", Integer.toString(goals[0].getY()));
-		inputs.put("targetB[0]", Integer.toString(goals[1].getX()));
-		inputs.put("targetB[1]", Integer.toString(goals[1].getY()));
-		inputs.put("targetC[0]", Integer.toString(goals[2].getX()));
-		inputs.put("targetC[1]", Integer.toString(goals[2].getY()));
-		
-		
-		switch (this.variant_num) {
-		case 2: 
-			// Set initial origin color
-			this.origin_color = Color.RED;
-			break;
-		case 3:
-			// No engine problem at the beginning of the run
-			engine_problem = false;
-			inputs.put("engine_problem", Boolean.toString(engine_problem));
-			engine_cooldown_counter = 15;
-			break;
+		// Randomize the decision of cleaning request, if cleaning_request = 1, choose random target to clean.
+		cleaning_request = rand.nextBoolean();
+		inputs.put("cleaning_request", Boolean.toString(cleaning_request));
+		if (cleaning_request) {
+			target = randomizeTarget();
 		}
+		inputs.put("target[0]", Integer.toString(target.getX()));
+		inputs.put("target[1]", Integer.toString(target.getY()));
+		
+		inputs.put("green_light", Boolean.toString(false));
 
 		executor.initState(inputs);
 
@@ -113,11 +109,6 @@ public class ControlPanel {
 		robot.setX(Integer.parseInt(sysValues.get("robotX")));
 		robot.setY(Integer.parseInt(sysValues.get("robotY")));
 		
-		targets_color = new Color[goals.length];
-		for (int i = 0; i < targets_color.length; i++) {
-			this.targets_color[i] = Color.GREEN;
-		}
-
 		setUpUI();
 	}
 
@@ -229,6 +220,15 @@ public class ControlPanel {
 		advance_button.setVisible(true);
 		autorun_button.setVisible(true);
 		ready_for_next = true;
+	}
+	
+	Point randomizeTarget () {
+		Point rand_target;
+		do {
+			rand_target = new Point(rand.nextInt(x - 1), rand.nextInt(y - 1));
+		}
+		while (forbbiden_points.contains(rand_target));
+		return rand_target;	
 	}
 
 }

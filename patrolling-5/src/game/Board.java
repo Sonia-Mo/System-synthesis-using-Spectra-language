@@ -29,22 +29,18 @@ public class Board extends JPanel {
 
 	BufferedImage buffer;
 	BufferedImage robot_image;
+	BufferedImage robot_blue_image;
 	BufferedImage robot_green_image;
 	BufferedImage robot_yellow_image;
 	BufferedImage robot_red_image;
-	BufferedImage[] goals_images;
+	// TODO: WTF?! why do we need it
 	BufferedImage base_robot_images;
 	BufferedImage obstacle_image;
-	BufferedImage origin_green_image;
-	BufferedImage origin_red_image;
-	BufferedImage target_green_image;
-	BufferedImage target_red_image;
+	BufferedImage target_image;
 
 	public Board(ControlPanel cp) {
 		super();
 		this.cp = cp;
-		goals_images = new BufferedImage[cp.goals.length];
-
 	}
 
 	public void init() throws Exception {
@@ -53,9 +49,12 @@ public class Board extends JPanel {
 		robot_graphics = new Point();
 
 		obstacle_image = ImageIO.read(new File("img/Obstacle.png"));
+		target_image = ImageIO.read(new File("img/Goal0.png"));
 
 		// Load images for different elements
+		// TODO: robot base?
 		base_robot_images = ImageIO.read(new File("img/Robot0.png"));
+		robot_blue_image = ImageIO.read(new File("img/Robot2.png"));
 		robot_red_image = ImageIO.read(new File("img/Robot0.png"));
 		robot_green_image = ImageIO.read(new File("img/Robot1.png"));
 		robot_yellow_image = ImageIO.read(new File("img/Yellow Robot.png"));

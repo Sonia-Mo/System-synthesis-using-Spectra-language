@@ -6,8 +6,10 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
 import javax.swing.JButton;
@@ -20,7 +22,13 @@ import tau.smlab.syntech.controller.jit.BasicJitController;
  * Manages the simulation - GUI, controller input/output, board (visualization)
  */
 
-enum Color {RED, GREEN, YELLOW}
+enum Color {
+	RED, GREEN, BLUE
+}
+
+enum Rotation {
+	DEG_0, DEG_90, DEG_180, DEG_270
+}
 
 public class ControlPanel {
 	// board dimensions
@@ -29,19 +37,23 @@ public class ControlPanel {
 	// board constants
 	final int dim = 100;
 	static final int y_offset = 30;
-	
-	int num_robots;
+
 	int num_obstacles;
-	int variant_num;
-	Color origin_color;
-	Color[] targets_color; // i = 0: targetA; i = 1: targetB; i = 2: targetC;
-	int engine_cooldown_counter;
-	boolean engine_problem;
+	Color robot_color;
+	boolean green_light;
+	boolean cleaning_request;
+	Set<Point> forbbiden_points = new HashSet<>();
+	Random rand = new Random();
+	int orange_steps;
+	Rotation robot_rotation;
+	int initial_wait_count;
+	boolean permission_to_move;
+	Set<Point> orange_zone;
 
 	Point robot;
 	Point[] obstacles;
-	Point[] goals; // i = 0: targetA; i = 1: targetB; i = 2: targetC;
-	
+	Point target;
+
 	// holds the robots previous position (for use when animating transitions)
 	Point robot_prev;
 
@@ -62,14 +74,20 @@ public class ControlPanel {
 	// The path to the controller files
 	String path;
 
-	public ControlPanel(int x, int y, Point[] obstacles, Point[] goals, String path, int variant_num) {
+	public ControlPanel(int x, int y, Point[] obstacles, Set<Point> orange_zone, String path) {
 		this.x = x;
 		this.y = y;
 		this.num_obstacles = obstacles.length;
-		this.variant_num = variant_num;
 		this.obstacles = obstacles;
-		this.goals = goals;
 		this.path = path;
+		this.orange_zone = orange_zone;
+
+		// Initialize set with all points that could not serve as target
+		for (int i = 0; i < num_obstacles; i++) {
+			forbbiden_points.add(obstacles[i]);
+		}
+		// Target cannot be located at origin
+		forbbiden_points.add(new Point(0, 0));
 	}
 
 	public void init() throws Exception {
@@ -77,46 +95,29 @@ public class ControlPanel {
 
 		robot = new Point();
 		robot_prev = new Point();
-		
+
 		// init controller
 		executor = new ControllerExecutor(new BasicJitController(), this.path);
-		
-		// Choose targets randomly
-		inputs.put("targetA[0]", Integer.toString(goals[0].getX()));
-		inputs.put("targetA[1]", Integer.toString(goals[0].getY()));
-		inputs.put("targetB[0]", Integer.toString(goals[1].getX()));
-		inputs.put("targetB[1]", Integer.toString(goals[1].getY()));
-		inputs.put("targetC[0]", Integer.toString(goals[2].getX()));
-		inputs.put("targetC[1]", Integer.toString(goals[2].getY()));
-		
-		
-		switch (this.variant_num) {
-		case 2: 
-			// Set initial origin color
-			this.origin_color = Color.RED;
-			break;
-		case 3:
-			// No engine problem at the beginning of the run
-			engine_problem = false;
-			inputs.put("engine_problem", Boolean.toString(engine_problem));
-			engine_cooldown_counter = 15;
-			break;
-		}
+
+		// Randomize the decision of cleaning request, if cleaning_request = 1, choose
+		// random target to clean.
+		cleaning_request = rand.nextBoolean();
+		inputs.put("cleaning_request", Boolean.toString(cleaning_request));
+		target = randomizeTarget();
+		inputs.put("target[0]", Integer.toString(target.getX()));
+		inputs.put("target[1]", Integer.toString(target.getY()));
+
+		inputs.put("green_light", Boolean.toString(rand.nextBoolean()));
 
 		executor.initState(inputs);
 
 		Map<String, String> sysValues = executor.getCurrOutputs();
-		
+
 		// Set initial robot locations
 		robot_prev.setX(Integer.parseInt(sysValues.get("robotX")));
 		robot_prev.setY(Integer.parseInt(sysValues.get("robotY")));
 		robot.setX(Integer.parseInt(sysValues.get("robotX")));
 		robot.setY(Integer.parseInt(sysValues.get("robotY")));
-		
-		targets_color = new Color[goals.length];
-		for (int i = 0; i < targets_color.length; i++) {
-			this.targets_color[i] = Color.GREEN;
-		}
 
 		setUpUI();
 	}
@@ -127,50 +128,42 @@ public class ControlPanel {
 		advance_button.setText("...");
 		robot_prev.setX(robot.getX());
 		robot_prev.setY(robot.getY());
-		
-		switch(variant_num) {
-		case 3:
-			// Keep engine problem true if robot is still not at origin.
-			if (engine_problem && !(robot_prev.getX() == 0 && robot_prev.getY() == 0)) {
-				engine_problem = true;
-			// Reset engine cooldown counter and turn off engine problem if robot got to origin.
-			} else if (engine_problem && robot_prev.getX() == 0 && robot_prev.getY() == 0) {
-				engine_cooldown_counter = 0;
-				engine_problem = false;
-			// Keep engine problem false while engine cooldown is less than 15. 
-			} else if (!engine_problem && engine_cooldown_counter < 15) {
-				engine_problem = false;	
-				engine_cooldown_counter++; 
-			// In case that engine problem is false and engine cooldown is greater than 14, randomize next value of engine problem.
-			} else {
-				Random random = new Random();
-				engine_problem = random.nextBoolean();
+
+		// TODO: add doc
+		if (cleaning_request && robot.equals(target) || !cleaning_request) {
+			cleaning_request = rand.nextBoolean();
+			if (cleaning_request) {
+				target = randomizeTarget();
 			}
-			inputs.put("engine_problem", Boolean.toString(engine_problem));		
-			break;
 		}
+		inputs.put("cleaning_request", Boolean.toString(cleaning_request));
+		inputs.put("target[0]", Integer.toString(target.getX()));
+		inputs.put("target[1]", Integer.toString(target.getY()));
+
+		green_light = rand.nextBoolean();
+		inputs.put("green_light", Boolean.toString(green_light));
 
 		executor.updateState(inputs);
 
 		// Receive updated values from the controller
 		Map<String, String> sysValues = executor.getCurrOutputs();
-		
+
 		// Update robot locations
 		robot.setX(Integer.parseInt(sysValues.get("robotX")));
 		robot.setY(Integer.parseInt(sysValues.get("robotY")));
-	
-		
-		switch (variant_num) {
-		case 2: 
-			this.origin_color = Color.valueOf(sysValues.get("origin_color"));
-			break;
-		case 3: 
-			this.targets_color[0] = Color.valueOf(sysValues.get("targetA_color"));
-			this.targets_color[1] = Color.valueOf(sysValues.get("targetB_color"));
-			this.targets_color[2] = Color.valueOf(sysValues.get("targetC_color"));
-			break;
+
+		// TODO: add doc
+		orange_steps = Integer.parseInt(sysValues.get("orange_steps"));
+		robot_rotation = Rotation.valueOf(sysValues.get("robot_rotation"));
+
+		if (initial_wait_count < 8) {
+			initial_wait_count++;
+		} else if (orange_steps == 5 || orange_steps == 6) {
+			permission_to_move = false;
+		} else if (green_light) {
+			permission_to_move = true;
 		}
-		
+
 		// Animate transition
 		board.animate();
 	}
@@ -229,6 +222,14 @@ public class ControlPanel {
 		advance_button.setVisible(true);
 		autorun_button.setVisible(true);
 		ready_for_next = true;
+	}
+
+	Point randomizeTarget() {
+		Point rand_target;
+		do {
+			rand_target = new Point(rand.nextInt(x - 1), rand.nextInt(y - 1));
+		} while (forbbiden_points.contains(rand_target));
+		return rand_target;
 	}
 
 }
