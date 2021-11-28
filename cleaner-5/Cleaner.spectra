@@ -2,28 +2,24 @@ import "./imports/DwyerPatternsNamed.spectra"
 spec Cleaner
 
 define Dim := 8;
-define robot_at_origin := at_origin(robotX, robotY);
-define at_target := robotX = target[0] & robotY = target[1];
-
-type Rotation = {DEG_0, DEG_90, DEG_180, DEG_270};
 type Coord = Int(0..(Dim - 1));
  
 sys Coord robotX;
 sys Coord robotY;
-
-// Environment variable which indicates if a target should be cleaned
-// In case cleaning_request = false ignore target variable
-env boolean cleaning_request;
 env Coord[2] target;
 
-env boolean greenLight;
-		
+define robot_at_origin := at_origin(robotX, robotY);
+define at_target := robotX = target[0] & robotY = target[1];
+
 // *********************************************
 // ***      General Task Requirements        ***
 // *********************************************
 
-// If there is a cleaning request from a target, the robot should eventually visit it
-gar trig [true]*[cleaning_request & !at_target] |=> [!at_target]*[at_target];
+// Environment variable which indicates if a target should be cleaned
+// In case cleaning_request = false ignore target variable
+env boolean cleaning_request;
+
+env boolean greenLight;
 
 // A cleaning target can be any cell that is not (0,0) and not an obstacle
 asm alw !on_obstacle(target[0], target[1]) & !at_origin(target[0], target[1]);
@@ -37,13 +33,18 @@ gar ini robot_at_origin;
 
 // Make sure robot doesn't walk over obstacles
 gar alw !on_obstacle(robotX, robotY);	
-	 
+
 // The robot can move to adjacent cells horizontally or vertically, but not diagonally
 gar alw move_vertically() | move_horizontally() | stay();
+
+// If there is a cleaning request from a target, the robot should eventually visit it
+gar trig [true]*[cleaning_request & !at_target] |=> [!at_target]*[at_target];
 	
 // *********************************************
 // ***          Property #1                  ***
 // *********************************************
+
+type Rotation = {DEG_0, DEG_90, DEG_180, DEG_270};
 
 sys Rotation robot_rotation;
 
@@ -56,9 +57,6 @@ gar alw at_orange_zone() & next(at_orange_zone()) & robot_rotation = DEG_0 -> ne
 gar alw at_orange_zone() & next(at_orange_zone()) & robot_rotation = DEG_90 -> next(robot_rotation) = DEG_180;
 gar alw at_orange_zone() & next(at_orange_zone()) & robot_rotation = DEG_180 -> next(robot_rotation) = DEG_270;
 gar alw at_orange_zone() & next(at_orange_zone()) & robot_rotation = DEG_270 -> next(robot_rotation) = DEG_0;
-
-predicate at_orange_zone():
-	(robotX >= 1 & robotX <= 5) & (robotY = 0 | robotY = 2 | robotY = 3 | robotY = 5 | robotY = 6);
 
 // *********************************************
 // ***          Property #2                  ***
@@ -105,6 +103,7 @@ counter initial_wait_count (0..8) {
 // *********************************************
 // ***          Predicates                  ***
 // *********************************************
+
 predicate on_obstacle(Coord x, Coord y):
 	(x = 1 & y = 1) | (x = 2 & y = 1) | (x = 3 & y = 1) | (x = 4 & y = 1) | (x = 5 & y = 1) | 
 	(x = 1 & y = 4) | (x = 2 & y = 4) | (x = 3 & y = 4) | (x = 4 & y = 4) | (x = 5 & y = 4) |
@@ -124,3 +123,6 @@ predicate move_horizontally():
 
 predicate stay():
 	fixed_inplace(robotX, robotY);
+	
+predicate at_orange_zone():
+	(robotX >= 1 & robotX <= 5) & (robotY = 0 | robotY = 2 | robotY = 3 | robotY = 5 | robotY = 6);
