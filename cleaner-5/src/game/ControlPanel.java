@@ -3,18 +3,13 @@ package game;
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.image.BufferedImage;
-import java.io.File;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-
-import javax.imageio.ImageIO;
 import javax.swing.JButton;
 import javax.swing.JFrame;
-
 import tau.smlab.syntech.controller.executor.ControllerExecutor;
 import tau.smlab.syntech.controller.jit.BasicJitController;
 
@@ -39,22 +34,26 @@ public class ControlPanel {
 	static final int y_offset = 30;
 
 	int num_obstacles;
-	Color robot_color;
+	int orange_steps;
+	// Counter which represents the initial steps of execution, robot should stay at origin for the first 8 steps
+	int initial_wait_count;
+	
 	boolean green_light;
 	boolean cleaning_request;
-	Set<Point> forbbiden_points = new HashSet<>();
-	Random rand = new Random();
-	int orange_steps;
-	Rotation robot_rotation;
-	int initial_wait_count;
 	boolean permission_to_move;
+
+	Set<Point> forbbiden_points;
 	Set<Point> orange_zone;
 
+	Random rand = new Random();
+	Color robot_color;
+	Rotation robot_rotation;
+	
 	Point robot;
 	Point[] obstacles;
 	Point target;
 
-	// holds the robots previous position (for use when animating transitions)
+	// Holds the robots previous position (for use when animating transitions)
 	Point robot_prev;
 
 	// Board and GUI elements
@@ -63,7 +62,7 @@ public class ControlPanel {
 	JButton advance_button;
 	JButton autorun_button;
 
-	// holds states for the animation
+	// Holds states for the animation
 	boolean ready_for_next;
 	boolean autorun;
 
@@ -81,8 +80,9 @@ public class ControlPanel {
 		this.obstacles = obstacles;
 		this.path = path;
 		this.orange_zone = orange_zone;
-
+		
 		// Initialize set with all points that could not serve as target
+		this.forbbiden_points = new HashSet<>();
 		for (int i = 0; i < num_obstacles; i++) {
 			forbbiden_points.add(obstacles[i]);
 		}
@@ -129,9 +129,11 @@ public class ControlPanel {
 		robot_prev.setX(robot.getX());
 		robot_prev.setY(robot.getY());
 
-		// TODO: add doc
+		// If there is a cleaning request and robot reaches the target or there is no cleaning request,
+		// randomize the decision of having a cleaning request in the next state
 		if (cleaning_request && robot.equals(target) || !cleaning_request) {
 			cleaning_request = rand.nextBoolean();
+			// If there is a cleaning request, randomize a target to clean
 			if (cleaning_request) {
 				target = randomizeTarget();
 			}
@@ -152,20 +154,26 @@ public class ControlPanel {
 		robot.setX(Integer.parseInt(sysValues.get("robotX")));
 		robot.setY(Integer.parseInt(sysValues.get("robotY")));
 
-		// TODO: add doc
 		orange_steps = Integer.parseInt(sysValues.get("orange_steps"));
 		robot_rotation = Rotation.valueOf(sysValues.get("robot_rotation"));
 
 		if (initial_wait_count < 8) {
 			initial_wait_count++;
-		} else if (orange_steps == 5 || orange_steps == 6) {
-			permission_to_move = false;
-		} else if (green_light) {
-			permission_to_move = true;
 		}
 
 		// Animate transition
 		board.animate();
+
+		// When done with the 8 initial steps, after the robot has been at the orange zone 
+		// for 5 consecutive steps, permission_to_move = false while it waits in place for 2 steps
+		// and after that, if there is a green light, permission_to_move = true and it can start moving again
+		if (initial_wait_count == 8) {
+			if (orange_steps == 5 || orange_steps == 6) {
+				permission_to_move = false;
+			} else if (green_light) {
+				permission_to_move = true;
+			}
+		}
 	}
 
 	void setUpUI() throws Exception {

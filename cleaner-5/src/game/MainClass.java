@@ -10,7 +10,7 @@ public class MainClass {
 		int y = 8;
 		final int num_obstacles = 12;
 
-
+		// Create an array of all obstacles
 		Point[] obstacles = new Point[num_obstacles];
 		obstacles[0] = new Point(1, 1);		
 		obstacles[1] = new Point(2, 1);
@@ -25,7 +25,7 @@ public class MainClass {
 		obstacles[10] = new Point(1, 7);		
 		obstacles[11] = new Point(4, 7);
 		
-		//TODO add doc
+		// Create a set of all orange zone points
 		int[] y_coord = {0, 2, 3, 5, 6};
 		Set<Point> orange_zone = new HashSet<>();
 		for (int x_coord = 1; x_coord <= 5; x_coord++) {
@@ -33,7 +33,6 @@ public class MainClass {
 				orange_zone.add(new Point(x_coord, y_coord[i]));
 			}
 		}
-	
 		
 		ControlPanel cp;
 		String path = "out//";

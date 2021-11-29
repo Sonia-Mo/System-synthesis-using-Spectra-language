@@ -39,7 +39,6 @@ public class Board extends JPanel {
 	BufferedImage target_image;
 	BufferedImage orange_zone_image;
 
-
 	public Board(ControlPanel cp) {
 		super();
 		this.cp = cp;
@@ -53,14 +52,14 @@ public class Board extends JPanel {
 		obstacle_image = ImageIO.read(new File("img/Obstacle.png"));
 		target_image = ImageIO.read(new File("img/Goal0.png"));
 
-		// Load images for different elements
+		// Load images for different robot colors
 		robot_blue_image = ImageIO.read(new File("img/Robot2.png"));
 		robot_red_image = ImageIO.read(new File("img/Robot0.png"));
 		robot_green_image = ImageIO.read(new File("img/Robot1.png"));
 
 		base_robot_image = robot_blue_image;
 		robot_image = base_robot_image;
-		
+
 		orange_zone_image = ImageIO.read(new File("img/orange_cube.png"));
 	}
 
@@ -71,23 +70,42 @@ public class Board extends JPanel {
 
 		int diff_x = cp.robot.getX() - cp.robot_prev.getX();
 		int diff_y = cp.robot.getY() - cp.robot_prev.getY();
-
-		// rotate robots based on direction
-		switch (diff_x) {
-		case -1:
-			robot_rotation = 3 * Math.PI / 2;
-			break;
-		case 1:
-			robot_rotation = Math.PI / 2;
-			break;
-		}
-		switch (diff_y) {
-		case -1:
-			robot_rotation = 0;
-			break;
-		case 1:
-			robot_rotation = Math.PI;
-			break;
+		
+		// Whenever the robot reaches the orange zone, it repeatedly switches its usual appearance
+		// Its appearance rotates 90 degrees to the right at each step, until it leaves the orange zone
+		if (cp.orange_zone.contains(cp.robot)) {
+			switch (cp.robot_rotation) {
+			case DEG_0:
+				robot_rotation = 0;
+				break;
+			case DEG_90:
+				robot_rotation = Math.PI / 2;
+				break;
+			case DEG_180:
+				robot_rotation = Math.PI;
+				break;
+			case DEG_270:
+				robot_rotation = 3 * Math.PI / 2;
+				break;
+			}
+		} else {
+			// rotate robots based on direction
+			switch (diff_x) {
+			case -1:
+				robot_rotation = 3 * Math.PI / 2;
+				break;
+			case 1:
+				robot_rotation = Math.PI / 2;
+				break;
+			}
+			switch (diff_y) {
+			case -1:
+				robot_rotation = 0;
+				break;
+			case 1:
+				robot_rotation = Math.PI;
+				break;
+			}
 		}
 		robot_image = Utility.rotate(base_robot_image, robot_rotation);
 
@@ -148,9 +166,7 @@ public class Board extends JPanel {
 		if (getWidth() > 0 && getHeight() > 0) {
 
 			if (buffer == null) {
-
 				buffer = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_RGB);
-
 			}
 
 			Graphics2D g2d = buffer.createGraphics();
@@ -178,22 +194,22 @@ public class Board extends JPanel {
 					g2d.fillRect(col * cp.dim, row * cp.dim, cp.dim, cp.dim);
 				}
 			}
-				
 
 			g2d.setColor(Color.WHITE);
 			// g2d.drawImage(robot_image, temp, dim, null);
-			
-			for (Point point: cp.orange_zone) {
+
+			// Draw orange zone
+			for (Point point : cp.orange_zone) {
 				g2d.drawImage(orange_zone_image, point.getX() * cp.dim, point.getY() * cp.dim, null);
 			}
 
-			// Draw target
+			// Draw target - if there is no cleaning request, ignore the target
 			if (cp.cleaning_request) {
 				g2d.drawImage(target_image, cp.target.getX() * cp.dim, cp.target.getY() * cp.dim, null);
 			}
 
 			// Draw robots
-			g2d.drawImage(robot_image, robot_graphics.getX(), robot_graphics.getY(), null);		
+			g2d.drawImage(robot_image, robot_graphics.getX(), robot_graphics.getY(), null);
 
 			// Draw obstacles
 			for (int i = 0; i < cp.num_obstacles; i++) {
@@ -211,6 +227,11 @@ public class Board extends JPanel {
 		}
 	}
 
+	// Update base robot image:
+	// In the 8 initial steps robot is blue and than it turns red until green light is on (permission_to_move = false).
+	// When robot reaches a target it turns green.
+	// Whenever robot is waiting at orange zone (permission_to_move = false) it turns red. 
+	// In all other cases, robot is blue.
 	public void update_base_robot_image() {
 		if (cp.initial_wait_count < 8) {
 			base_robot_image = robot_blue_image;
