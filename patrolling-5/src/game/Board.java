@@ -20,6 +20,8 @@ public class Board extends JPanel {
 	int animation_steps = 0;
 	Timer timer;
 	ControlPanel cp;
+	
+	double rotation;
 
 	// The robots current, start, and target locations for a single transition
 	// - used for animation
@@ -33,7 +35,7 @@ public class Board extends JPanel {
 	BufferedImage robot_yellow_image;
 	BufferedImage robot_red_image;
 	BufferedImage[] goals_images;
-	BufferedImage base_robot_images;
+	BufferedImage base_robot_image;
 	BufferedImage obstacle_image;
 	BufferedImage origin_green_image;
 	BufferedImage origin_red_image;
@@ -55,22 +57,24 @@ public class Board extends JPanel {
 		obstacle_image = ImageIO.read(new File("img/Obstacle.png"));
 
 		// Load images for different elements
-		base_robot_images = ImageIO.read(new File("img/Robot0.png"));
+		base_robot_image = ImageIO.read(new File("img/Robot0.png"));
 		robot_red_image = ImageIO.read(new File("img/Robot0.png"));
 		robot_green_image = ImageIO.read(new File("img/Robot1.png"));
 		robot_yellow_image = ImageIO.read(new File("img/Yellow Robot.png"));
 
 		switch (cp.variant_num) {
 		case 1:
-			robot_image = robot_red_image;
+			base_robot_image = robot_red_image;
 			break;
 		case 2:
-			robot_image = robot_red_image;
+			base_robot_image = robot_red_image;
 			break;
 		case 3:
-			robot_image = robot_green_image;
+			base_robot_image = robot_green_image;
 			break;
 		}
+		
+		robot_image = base_robot_image;
 
 		origin_red_image = ImageIO.read(new File("img/Red Starting Point.png"));
 		origin_green_image = ImageIO.read(new File("img/Green Starting Point.png"));
@@ -87,23 +91,35 @@ public class Board extends JPanel {
 
 		int diff_x = cp.robot.getX() - cp.robot_prev.getX();
 		int diff_y = cp.robot.getY() - cp.robot_prev.getY();
+
+		switch (cp.variant_num) {
+		case 3:
+			if (cp.engine_problem == true) {
+				base_robot_image = robot_yellow_image;
+			} else {
+				base_robot_image = robot_green_image;
+			}
+			break;
+		}
 		// rotate robots based on direction
 		switch (diff_x) {
 		case -1:
-			robot_image = Utility.rotate(base_robot_images, 3 * Math.PI / 2);
+			rotation = 3 * Math.PI / 2;
 			break;
 		case 1:
-			robot_image = Utility.rotate(base_robot_images, Math.PI / 2);
+			rotation = Math.PI / 2;
 			break;
 		}
 		switch (diff_y) {
 		case -1:
-			robot_image = Utility.rotate(base_robot_images, 0);
+			rotation = 0;
 			break;
 		case 1:
-			robot_image = Utility.rotate(base_robot_images, Math.PI);
+			rotation = Math.PI;
 			break;
 		}
+		robot_image = Utility.rotate(base_robot_image, rotation);
+
 
 		robot_graphics.setX(cp.robot_prev.getX() * cp.dim);
 		robot_graphics.setY(cp.robot_prev.getY() * cp.dim);
@@ -212,13 +228,7 @@ public class Board extends JPanel {
 					} else if (cp.targets_color[i] == game.Color.RED) {
 						goals_images[i] = target_red_image;
 					}
-				}
-				if (cp.engine_problem == true) {
-					robot_image = robot_yellow_image;
-				} else {
-					robot_image = robot_green_image;
-				}
-				break;
+				}	
 			}
 
 			for (int i = 0; i < cp.goals.length; i++) {

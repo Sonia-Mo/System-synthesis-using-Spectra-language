@@ -20,7 +20,7 @@ public class UnlabelledBoard extends Board {
 		obstacle_image = ImageIO.read(new File("img/Obstacle.png"));
 
 		// Unlabelled: Use the same image for all robots/goals
-		base_robot_images = ImageIO.read(new File("img/Robot0.png"));
+		base_robot_image = ImageIO.read(new File("img/Robot0.png"));
 		robot_image = ImageIO.read(new File("img/Robot0.png"));
 		for (int i = 0; i < goals_images.length; i++) {
 			goals_images[i] = ImageIO.read(new File("img/Goal" + String.valueOf(0) + ".png"));
