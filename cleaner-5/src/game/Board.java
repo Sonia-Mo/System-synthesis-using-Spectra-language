@@ -65,48 +65,10 @@ public class Board extends JPanel {
 
 	// Animate a transition (from robots_prev to robots)
 	public void animate() throws Exception {
-
-		update_base_robot_image();
-
-		int diff_x = cp.robot.getX() - cp.robot_prev.getX();
-		int diff_y = cp.robot.getY() - cp.robot_prev.getY();
 		
-		// Whenever the robot reaches the orange zone, it repeatedly switches its usual appearance
-		// Its appearance rotates 90 degrees to the right at each step, until it leaves the orange zone
-		if (cp.orange_zone.contains(cp.robot)) {
-			switch (cp.robot_rotation) {
-			case DEG_0:
-				robot_rotation = 0;
-				break;
-			case DEG_90:
-				robot_rotation = Math.PI / 2;
-				break;
-			case DEG_180:
-				robot_rotation = Math.PI;
-				break;
-			case DEG_270:
-				robot_rotation = 3 * Math.PI / 2;
-				break;
-			}
-		} else {
-			// rotate robots based on direction
-			switch (diff_x) {
-			case -1:
-				robot_rotation = 3 * Math.PI / 2;
-				break;
-			case 1:
-				robot_rotation = Math.PI / 2;
-				break;
-			}
-			switch (diff_y) {
-			case -1:
-				robot_rotation = 0;
-				break;
-			case 1:
-				robot_rotation = Math.PI;
-				break;
-			}
-		}
+		updateBaseRobotImage();
+		updateRotation();
+
 		robot_image = Utility.rotate(base_robot_image, robot_rotation);
 
 		robot_graphics.setX(cp.robot_prev.getX() * cp.dim);
@@ -227,20 +189,61 @@ public class Board extends JPanel {
 		}
 	}
 
-	// Update base robot image:
-	// In the 8 initial steps robot is blue and than it turns red until green light is on (permission_to_move = false).
-	// When robot reaches a target it turns green.
-	// Whenever robot is waiting at orange zone (permission_to_move = false) it turns red. 
-	// In all other cases, robot is blue.
-	public void update_base_robot_image() {
-		if (cp.initial_wait_count < 8) {
-			base_robot_image = robot_blue_image;
-		} else if (!cp.permission_to_move) {
-			base_robot_image = robot_red_image;
-		} else if (cp.robot.equals(cp.target)) {
+	// Update base robot image
+	public void updateBaseRobotImage() {
+		switch (cp.robot_color) {
+		case GREEN:
 			base_robot_image = robot_green_image;
-		} else {
+			break;
+		case RED:
+			base_robot_image = robot_red_image;
+			break;
+		case BLUE:
 			base_robot_image = robot_blue_image;
+		}
+	}
+
+	// Rotate robots based on direction, outside of the orange zone
+	public void updateDefaultRotation() {
+		int diff_x = cp.robot.getX() - cp.robot_prev.getX();
+		int diff_y = cp.robot.getY() - cp.robot_prev.getY();
+		switch (diff_x) {
+		case -1:
+			robot_rotation = 3 * Math.PI / 2;
+			break;
+		case 1:
+			robot_rotation = Math.PI / 2;
+			break;
+		}
+		switch (diff_y) {
+		case -1:
+			robot_rotation = 0;
+			break;
+		case 1:
+			robot_rotation = Math.PI;
+			break;
+		}
+	}
+	
+	// Whenever the robot reaches the orange zone, it repeatedly switches its usual appearance
+	// Its appearance rotates 90 degrees to the right at each step, until it leaves
+	// the orange zone
+	public void updateRotation() {
+		switch (cp.robot_rotation) {
+		case DEG_0:
+			robot_rotation = 0;
+			break;
+		case DEG_90:
+			robot_rotation = Math.PI / 2;
+			break;
+		case DEG_180:
+			robot_rotation = Math.PI;
+			break;
+		case DEG_270:
+			robot_rotation = 3 * Math.PI / 2;
+			break;
+		case NONE:
+			updateDefaultRotation();
 		}
 	}
 }

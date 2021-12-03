@@ -22,7 +22,7 @@ enum Color {
 }
 
 enum Rotation {
-	DEG_0, DEG_90, DEG_180, DEG_270
+	NONE, DEG_0, DEG_90, DEG_180, DEG_270
 }
 
 public class ControlPanel {
@@ -40,7 +40,6 @@ public class ControlPanel {
 	
 	boolean green_light;
 	boolean cleaning_request;
-	boolean permission_to_move;
 
 	Set<Point> forbbiden_points;
 	Set<Point> orange_zone;
@@ -156,24 +155,10 @@ public class ControlPanel {
 
 		orange_steps = Integer.parseInt(sysValues.get("orange_steps"));
 		robot_rotation = Rotation.valueOf(sysValues.get("robot_rotation"));
-
-		if (initial_wait_count < 8) {
-			initial_wait_count++;
-		}
-
+		robot_color = Color.valueOf(sysValues.get("robot_color"));
+		
 		// Animate transition
 		board.animate();
-
-		// When done with the 8 initial steps, after the robot has been at the orange zone 
-		// for 5 consecutive steps, permission_to_move = false while it waits in place for 2 steps
-		// and after that, if there is a green light, permission_to_move = true and it can start moving again
-		if (initial_wait_count == 8) {
-			if (orange_steps == 5 || orange_steps == 6) {
-				permission_to_move = false;
-			} else if (green_light) {
-				permission_to_move = true;
-			}
-		}
 	}
 
 	void setUpUI() throws Exception {
