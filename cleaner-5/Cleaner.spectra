@@ -28,10 +28,6 @@ env boolean green_light;
 // A cleaning target can be any cell that is not (0,0) and not an obstacle
 asm alw !on_obstacle(target[0], target[1]) & !at_origin(target[0], target[1]);
 
-// As long as the robot hasn't reached the target, target's location is not changed and cleaning request remains true
-// If left condition doesn't hold, the value of cleaning request is determined (randomly) by the environment
-asm alw cleaning_request & !at_target -> fixed_inplace(target[0], target[1]) & next(cleaning_request);
-
 // Fix the initial location of the robot at (0,0)
 gar ini robot_at_origin;
 
@@ -44,17 +40,13 @@ gar alw move_vertically() | move_horizontally() | stay();
 // If there is a cleaning request from a target, the robot should eventually visit it
 gar trig [true]*[cleaning_request & !at_target] |=> [!at_target]*[at_target];
 
-
 // ======== color definitions ========
-// Robot turns green when reaches a target and there is a cleaning request 
-gar alw orange_steps <= 5 & cleaning_request & at_target -> robot_color = GREEN;
-
-// When robot is waiting for green light it's color is red
-gar alw initial_wait_count = 8 & !initial_green_light | orange_steps > 5 -> robot_color = RED;
-
+// Robot turns green when it is cleaning a target 
+// When robot is waiting for green light and is not cleaning a target, it's color is red 
 // In all other cases robot's color is blue
-gar alw initial_wait_count < 8 | orange_steps <= 5 & initial_green_light & (cleaning_request & !at_target | !cleaning_request) -> 
-		robot_color = BLUE;
+gar alw cleaning_target() & robot_color = GREEN |
+	(initial_wait_count = 8 & !initial_green_light | orange_steps > 5 & !cleaning_target()) & robot_color = RED |
+	(initial_wait_count < 8 | orange_steps <= 5 & initial_green_light & !cleaning_target()) & robot_color = BLUE;
 		
 // *********************************************
 // ***          Property #1                  ***
@@ -104,6 +96,29 @@ gar alw next(orange_steps = 7) -> stay();
 // start moving again (if robot moves out of the orange zone orange_steps is set to 0 and otherwise to 1)
 gar alw PREV(orange_steps = 7) & green_light -> orange_steps = 0 | orange_steps = 1;
 
+// *********************************************
+// ***          Property #3                  ***
+// *********************************************
+
+// Counter which indicates the cleaning progress of a target
+sys Int(0..5) cleaning_target_counter;
+
+gar alw !cleaning_target() <-> cleaning_target_counter = 0;
+
+// Robot should stay and the counter should be incremented
+gar alw 0 < cleaning_target_counter & cleaning_target_counter < 5 -> 
+		next(cleaning_target_counter) = cleaning_target_counter + 1 & stay();
+
+// If robot starts cleaning a target then counter should be set to 1		
+gar alw cleaning_target_counter = 0 & next(cleaning_target()) -> next(cleaning_target_counter) = 1;
+
+// After finishing cleaning, i.e counter reached 5, reset it
+gar alw cleaning_target_counter = 5 -> next(cleaning_target_counter = 0 | cleaning_target_counter = 1);
+
+// as long as there is a cleaning request and the counter is less then 5, the cleaning request will remain true 
+// and the target will be fixed in place
+// If left condition doesn't hold, the value of cleaning request is determined (randomly) by the environment
+asm alw cleaning_target_counter < 5 & cleaning_request -> fixed_inplace(target[0], target[1]) & next(cleaning_request);
 
 // *********************************************
 // ***          Property #6                  ***
@@ -159,3 +174,6 @@ predicate stay():
 	
 predicate at_orange_zone():
 	(robotX >= 1 & robotX <= 5) & (robotY = 0 | robotY = 2 | robotY = 3 | robotY = 5 | robotY = 6);
+	
+predicate cleaning_target():
+	cleaning_request & at_target;	
