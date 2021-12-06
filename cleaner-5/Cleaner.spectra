@@ -121,6 +121,41 @@ gar alw cleaning_target_counter = 5 -> next(cleaning_target_counter = 0 | cleani
 asm alw cleaning_target_counter < 5 & cleaning_request -> fixed_inplace(target[0], target[1]) & next(cleaning_request);
 
 // *********************************************
+// ***          Property #4                  ***
+// *********************************************
+
+env boolean permission_to_empty;
+
+// Counter that represents the tank's state
+sys Int(0..full_tank) tank;
+define full_tank := 5;
+
+gar ini tank = 0;
+
+// Defining tank transitions:
+// * tank is incremented after robot finished cleaning the target.
+// * If robot has not finished the target (or there is no cleaning request) then tank stays the same.
+// * If the tank is full and robot is not at origin or permission_to_empty will be false in the next state
+// 	 then the tank stays full.
+// * If the tank is full and robot is at origin and permission_to_empty will be true then the tank resets to 0.
+gar alw cleaning_target_counter = 5 & next(tank) = tank + 1 |
+		cleaning_target_counter != 5 & tank != full_tank & next(tank) = tank |
+		tank = full_tank & next(tank) = full_tank & (!robot_at_origin | !next(permission_to_empty)) |
+		tank = full_tank & next(tank) = 0 & robot_at_origin & next(permission_to_empty);
+
+// After the tank is resets, robot should stay another state in origin.					
+gar alw PREV(tank = full_tank) & tank = 0 -> stay();
+
+// As long as tank is full and robot is at origin, it should stay there
+gar alw tank = full_tank & robot_at_origin -> stay();
+
+// Randomly assigned by the environment
+asm alwEv permission_to_empty;
+
+// After tank becomes true, robot should eventually visit origin
+gar alw P_becomes_true_After_Q(tank = full_tank, robot_at_origin);
+
+// *********************************************
 // ***          Property #6                  ***
 // *********************************************
 
@@ -176,4 +211,4 @@ predicate at_orange_zone():
 	(robotX >= 1 & robotX <= 5) & (robotY = 0 | robotY = 2 | robotY = 3 | robotY = 5 | robotY = 6);
 	
 predicate cleaning_target():
-	cleaning_request & at_target;	
+	cleaning_request & at_target & tank != full_tank;	
