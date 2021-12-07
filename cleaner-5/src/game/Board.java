@@ -38,6 +38,8 @@ public class Board extends JPanel {
 	BufferedImage obstacle_image;
 	BufferedImage target_image;
 	BufferedImage orange_zone_image;
+	BufferedImage robot_gray_image;
+	BufferedImage robot_yellow_image;
 
 	public Board(ControlPanel cp) {
 		super();
@@ -56,6 +58,8 @@ public class Board extends JPanel {
 		robot_blue_image = ImageIO.read(new File("img/Robot2.png"));
 		robot_red_image = ImageIO.read(new File("img/Robot0.png"));
 		robot_green_image = ImageIO.read(new File("img/Robot1.png"));
+		robot_gray_image = ImageIO.read(new File("img/Robot_Gray.png"));
+		robot_yellow_image = ImageIO.read(new File("img/Yellow Robot.png"));
 
 		base_robot_image = robot_blue_image;
 		robot_image = base_robot_image;
@@ -200,6 +204,13 @@ public class Board extends JPanel {
 			break;
 		case BLUE:
 			base_robot_image = robot_blue_image;
+			break;
+		case YELLOW:
+			base_robot_image = robot_yellow_image;
+			break;
+		case GRAY:
+			base_robot_image = robot_gray_image;
+			break;
 		}
 	}
 

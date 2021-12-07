@@ -18,7 +18,7 @@ import tau.smlab.syntech.controller.jit.BasicJitController;
  */
 
 enum Color {
-	RED, GREEN, BLUE
+	RED, GREEN, BLUE, YELLOW, GRAY
 }
 
 enum Rotation {
@@ -37,6 +37,7 @@ public class ControlPanel {
 	int orange_steps;
 	// Counter which represents the initial steps of execution, robot should stay at origin for the first 8 steps
 	int initial_wait_count;
+	int cleaning_target_counter;
 	
 	boolean green_light;
 	boolean cleaning_request;
@@ -107,6 +108,7 @@ public class ControlPanel {
 		inputs.put("target[1]", Integer.toString(target.getY()));
 
 		inputs.put("green_light", Boolean.toString(rand.nextBoolean()));
+		inputs.put("permission_to_empty", Boolean.toString(rand.nextBoolean()));
 
 		executor.initState(inputs);
 
@@ -127,10 +129,10 @@ public class ControlPanel {
 		advance_button.setText("...");
 		robot_prev.setX(robot.getX());
 		robot_prev.setY(robot.getY());
-
+		//TODO: update doc cleaning_target_counter
 		// If there is a cleaning request and robot reaches the target or there is no cleaning request,
 		// randomize the decision of having a cleaning request in the next state
-		if (cleaning_request && robot.equals(target) || !cleaning_request) {
+		if (cleaning_request && cleaning_target_counter == 5 || !cleaning_request) {
 			cleaning_request = rand.nextBoolean();
 			// If there is a cleaning request, randomize a target to clean
 			if (cleaning_request) {
@@ -144,6 +146,8 @@ public class ControlPanel {
 		green_light = rand.nextBoolean();
 		inputs.put("green_light", Boolean.toString(green_light));
 
+		inputs.put("permission_to_empty", Boolean.toString(rand.nextBoolean()));
+
 		executor.updateState(inputs);
 
 		// Receive updated values from the controller
@@ -156,6 +160,7 @@ public class ControlPanel {
 		orange_steps = Integer.parseInt(sysValues.get("orange_steps"));
 		robot_rotation = Rotation.valueOf(sysValues.get("robot_rotation"));
 		robot_color = Color.valueOf(sysValues.get("robot_color"));
+		cleaning_target_counter = Integer.parseInt(sysValues.get("cleaning_target_counter"));
 		
 		// Animate transition
 		board.animate();
