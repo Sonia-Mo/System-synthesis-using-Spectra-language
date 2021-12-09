@@ -192,14 +192,27 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		this._pauseTime = this._pauseTime == 10 ? 0 : this._pauseTime + 1;
-
+		
 		updateCars();
 		updatePedestrians();
 		updateFog();
 		repaint();
+		//TODO
+		Random rand = new Random();
 
 		// get a new state from the controller if no cars or pedestrians are crossing
 		if (!isCarsCrossing() && !isPedsCrossing()) {
+			//TODO
+			if (rand.nextBoolean()) {
+				createVehicle(false);
+			}
+			if (rand.nextBoolean()) {
+				createVehicle(true);
+			}
+			if (rand.nextBoolean()) {
+				createPedestrian(100);
+			}
+			
 			if (this._cars.size() + this._pedestrians.size() != 0 || this._pauseTime == 10)
 				getNewState();
 		}
