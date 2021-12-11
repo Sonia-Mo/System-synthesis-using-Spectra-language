@@ -197,12 +197,10 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		updatePedestrians();
 		updateFog();
 		repaint();
-		//TODO
 		Random rand = new Random();
 
 		// get a new state from the controller if no cars or pedestrians are crossing
 		if (!isCarsCrossing() && !isPedsCrossing()) {
-			//TODO
 			if (rand.nextBoolean()) {
 				createVehicle(false);
 			}
