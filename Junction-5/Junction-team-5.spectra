@@ -77,13 +77,15 @@ define east := 1;
 // North right lane logic
 gar alw !greenWestPedestrians[north] & !greenNorthPedestrians[west] & vehiclesNorth[right_lane] != NONE -> 
 		greenNorthVehicles[right_lane];
+		
 gar alw greenWestPedestrians[north] | greenNorthPedestrians[west] | vehiclesNorth[right_lane] = NONE -> 
 		!greenNorthVehicles[right_lane];
 
 // North straight lane logic
 gar alw !greenSouthPedestrians[west] & !greenNorthPedestrians[west] & !greenSouthVehicles[left_lane] &
 		vehiclesNorth[straight_lane] != NONE -> greenNorthVehicles[straight_lane];
-gar alw greenSouthPedestrians[west] | greenNorthPedestrians[west] | greenSouthVehicles[left_lane] ->
+		
+gar alw greenSouthPedestrians[west] | greenNorthPedestrians[west] | greenSouthVehicles[left_lane] |
 		vehiclesNorth[straight_lane] = NONE -> !greenNorthVehicles[straight_lane];
 
 // North left lane logic
