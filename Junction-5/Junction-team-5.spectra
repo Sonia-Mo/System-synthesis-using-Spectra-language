@@ -31,12 +31,14 @@ env boolean[2] pedestriansWestPressed;
 // ***********************************************
 
 env boolean foggy;
+asm alwEv !foggy;
 
 // *********************************************
 // *** north road constructions env variable ***
 // *********************************************
 
 env boolean roadConstructions;
+asm alwEv !roadConstructions;
 
 // *******************************************************************************************************
 // *** cars traffic lights arrays sys variables, index 0 - right , index 1 - straight , index 2 - left ***
@@ -75,54 +77,62 @@ define east := 1;
 //----------------------------------------------------------------------------------------------------------------------
 
 // North right lane logic
-gar alw !greenWestPedestrians[north] & !greenNorthPedestrians[west] & vehiclesNorth[right_lane] != NONE -> 
+
+gar alw !greenWestPedestrians[north] & !greenNorthPedestrians[west] & 
+		(vehiclesNorth[right_lane] = CAR & !foggy | vehiclesNorth[right_lane] = EMERGENCY) -> 
 		greenNorthVehicles[right_lane];
-		
-gar alw greenWestPedestrians[north] | greenNorthPedestrians[west] | vehiclesNorth[right_lane] = NONE -> 
+
+gar alw greenWestPedestrians[north] | greenNorthPedestrians[west] | 
+		!(vehiclesNorth[right_lane] = CAR & !foggy | vehiclesNorth[right_lane] = EMERGENCY) -> 
 		!greenNorthVehicles[right_lane];
 
 // North straight lane logic
 gar alw !greenSouthPedestrians[west] & !greenNorthPedestrians[west] & !greenSouthVehicles[left_lane] &
-		vehiclesNorth[straight_lane] != NONE -> greenNorthVehicles[straight_lane];
-		
+		(vehiclesNorth[straight_lane] = CAR & !foggy | vehiclesNorth[straight_lane] = EMERGENCY) -> 
+		greenNorthVehicles[straight_lane];
+
 gar alw greenSouthPedestrians[west] | greenNorthPedestrians[west] | greenSouthVehicles[left_lane] |
-		vehiclesNorth[straight_lane] = NONE -> !greenNorthVehicles[straight_lane];
+		!(vehiclesNorth[straight_lane] = CAR & !foggy | vehiclesNorth[straight_lane] = EMERGENCY) -> 
+		!greenNorthVehicles[straight_lane];
 
 // North left lane logic
 gar alw !greenEastPedestrians[south] & !greenNorthPedestrians[west] & !greenSouthVehicles[straight_lane] &
-		!greenSouthVehicles[left_lane] & vehiclesNorth[left_lane] != NONE -> greenNorthVehicles[left_lane];
-		
-gar alw greenEastPedestrians[south] | greenNorthPedestrians[west] | greenSouthVehicles[straight_lane] |
-		greenSouthVehicles[left_lane] | vehiclesNorth[left_lane] = NONE -> !greenNorthVehicles[left_lane];
+		!greenSouthVehicles[left_lane] & (vehiclesNorth[left_lane] = CAR & !foggy | vehiclesNorth[left_lane] = EMERGENCY) -> 
+		greenNorthVehicles[left_lane];
 
+gar alw greenEastPedestrians[south] | greenNorthPedestrians[west] | greenSouthVehicles[straight_lane] |
+		greenSouthVehicles[left_lane] | !(vehiclesNorth[left_lane] = CAR & !foggy | vehiclesNorth[left_lane] = EMERGENCY) ->
+		!greenNorthVehicles[left_lane];
 		
 // South right lane logic
-gar alw !greenEastPedestrians[south] & !greenSouthPedestrians[east] & vehiclesSouth[right_lane] != NONE -> 
+gar alw !greenEastPedestrians[south] & !greenSouthPedestrians[east] & 
+		(vehiclesSouth[right_lane] = CAR & !foggy | vehiclesSouth[right_lane] = EMERGENCY) -> 
 		greenSouthVehicles[right_lane];
 		
-gar alw greenEastPedestrians[south] | greenSouthPedestrians[east] | vehiclesSouth[right_lane] = NONE -> 
+gar alw greenEastPedestrians[south] | greenSouthPedestrians[east] | 
+		!(vehiclesSouth[right_lane] = CAR & !foggy | vehiclesSouth[right_lane] = EMERGENCY) -> 
 		!greenSouthVehicles[right_lane];
-
 
 // South straight lane logic
 gar alw !greenNorthPedestrians[east] & !greenSouthPedestrians[east] & !greenNorthVehicles[left_lane] &
-		vehiclesSouth[straight_lane] != NONE -> greenSouthVehicles[straight_lane];
+		(vehiclesSouth[straight_lane] = CAR & !foggy | vehiclesSouth[straight_lane] = EMERGENCY) & 
+		!roadConstructions -> greenSouthVehicles[straight_lane];
 		
 gar alw greenNorthPedestrians[east] | greenSouthPedestrians[east] | greenNorthVehicles[left_lane] |
-		vehiclesSouth[straight_lane] = NONE -> !greenSouthVehicles[straight_lane];
+		!(vehiclesSouth[straight_lane] = CAR & !foggy | vehiclesSouth[straight_lane] = EMERGENCY) | roadConstructions -> 
+		!greenSouthVehicles[straight_lane];
 
-		
 // South left lane logic
 gar alw !greenWestPedestrians[north] & !greenSouthPedestrians[east] & !greenNorthVehicles[straight_lane] &
-		!greenNorthVehicles[left_lane] & vehiclesSouth[left_lane] != NONE -> greenSouthVehicles[left_lane];
+		!greenNorthVehicles[left_lane] & (vehiclesSouth[left_lane] = CAR & !foggy | vehiclesSouth[left_lane] = EMERGENCY) -> 
+		greenSouthVehicles[left_lane];
 		
 gar alw greenWestPedestrians[north] | greenSouthPedestrians[east] | greenNorthVehicles[straight_lane] |
-		greenNorthVehicles[left_lane] | vehiclesSouth[left_lane] = NONE -> !greenSouthVehicles[left_lane];
-		
+		greenNorthVehicles[left_lane] | !(vehiclesSouth[left_lane] = CAR & !foggy | vehiclesSouth[left_lane] = EMERGENCY) -> 
+		!greenSouthVehicles[left_lane];
 						
 gar alw greenEastPedestrians[north];
 gar alw greenWestPedestrians[south];
-
 
 // North-West pedestrian side walk logic
 gar alw !greenNorthVehicles[right_lane] & !greenNorthVehicles[straight_lane] & !greenNorthVehicles[left_lane] &
@@ -155,6 +165,7 @@ gar alw !greenNorthVehicles[left_lane] & !greenSouthVehicles[right_lane] & pedes
 		greenEastPedestrians[south];
 gar alw greenNorthVehicles[left_lane] | greenSouthVehicles[right_lane] | !pedestriansEastPressed[south] ->
 		!greenEastPedestrians[south];
+
 		
 // ========================== Assume there will always be a traffic at some point ==========================
 
@@ -248,7 +259,7 @@ gar alw vehiclesSouth[right_lane] = EMERGENCY -> !greenEastPedestrians[south] & 
 gar alw vehiclesNorth[right_lane] = EMERGENCY -> !greenWestPedestrians[north] & !greenNorthPedestrians[west];
 
 // South straight lane emergency vehicle has priority over north left lane vehicle, south-east and north-east pedestrians
-gar alw vehiclesSouth[straight_lane] = EMERGENCY ->
+gar alw vehiclesSouth[straight_lane] = EMERGENCY & !roadConstructions ->
 		!greenNorthVehicles[left_lane] & !greenSouthPedestrians[east] & !greenNorthPedestrians[east];
 
 // North straight lane emergency vehicle has priority over south left lane vehicle, south-west and north-west pedestrians
@@ -262,62 +273,7 @@ gar alw vehiclesSouth[left_lane] = EMERGENCY & vehiclesNorth[straight_lane] != E
 
 // North left lane emergency vehicle has priority over south straight and left lanes non-emergency vehicles, 
 // and north-west and east-south pedestrians 		
-gar alw vehiclesNorth[left_lane] = EMERGENCY & vehiclesSouth[straight_lane] != EMERGENCY & vehiclesSouth[left_lane] != EMERGENCY -> 
+gar alw vehiclesNorth[left_lane] = EMERGENCY & (vehiclesSouth[straight_lane] != EMERGENCY | roadConstructions) & 
+		vehiclesSouth[left_lane] != EMERGENCY -> 
 		!greenSouthVehicles[straight_lane] & !greenSouthVehicles[left_lane] & !greenNorthPedestrians[west] & !greenEastPedestrians[south];
 		
-// ============================ deprecated ============================
-
-
-//This triggers are now unrealizable - I think because of the <-> we added. It is possible that there will be for example 
-// 4 consecutive states with a vehicle on the same lane without any vehs or peds and thus it should stay green 4 states. 
-//gar trig [true]*[greenSouthVehicles[left_lane]]{2} |=> [!greenSouthVehicles[left_lane]];
-//gar trig [true]*[greenNorthVehicles[left_lane]]{2} |=> [!greenNorthVehicles[left_lane]];
-//
-//gar trig [true]*[greenSouthVehicles[right_lane]]{2} |=> [!greenSouthVehicles[right_lane]];
-//gar trig [true]*[greenNorthVehicles[right_lane]]{2} |=> [!greenNorthVehicles[right_lane]];
-//
-//gar trig [true]*[greenSouthVehicles[straight_lane]]{2} |=> [!greenSouthVehicles[straight_lane]];
-//gar trig [true]*[greenNorthVehicles[straight_lane]]{2} |=> [!greenNorthVehicles[straight_lane]];
-//
-//gar trig [true]*[greenNorthPedestrians[west]]{2} |=> [!greenNorthPedestrians[west]];
-//gar trig [true]*[greenNorthPedestrians[east]]{2} |=> [!greenNorthPedestrians[east]];
-//
-//gar trig [true]*[greenSouthPedestrians[west]]{2} |=> [!greenSouthPedestrians[west]];
-//gar trig [true]*[greenSouthPedestrians[east]]{2} |=> [!greenSouthPedestrians[east]];
-//
-//gar trig [true]*[greenEastPedestrians[south]]{2} |=> [!greenEastPedestrians[south]];
-//
-//gar trig [true]*[greenWestPedestrians[north]]{2} |=> [!greenWestPedestrians[north]];
-
-//gar trig [true]*[pedestriansNorthPressed[west]] |=> [true]*[greenNorthPedestrians[west]];
-//gar trig [true]*[pedestriansNorthPressed[east]] |=> [true]*[greenNorthPedestrians[east]];
-//
-//gar trig [true]*[pedestriansSouthPressed[west]] |=> [true]*[greenSouthPedestrians[west]];
-//gar trig [true]*[pedestriansSouthPressed[east]] |=> [true]*[greenSouthPedestrians[east]];
-//
-//gar trig [true]*[pedestriansWestPressed[north]] |=> [true]*[greenWestPedestrians[north]];
-//gar trig [true]*[pedestriansWestPressed[south]] |=> [true]*[greenWestPedestrians[south]];
-//
-//gar trig [true]*[pedestriansEastPressed[north]] |=> [true]*[greenEastPedestrians[north]];
-//gar trig [true]*[pedestriansEastPressed[south]] |=> [true]*[greenEastPedestrians[south]];
-//
-
-// Used alwEv vehicle & green light together with assumption for alwEv vehicle. Works faster.
-// Also originaly was defined a bit differently.
-//gar trig [true]*[vehiclesNorth[right_lane] != NONE & !greenNorthVehicles[right_lane]] |=> 
-//				[!greenNorthVehicles[right_lane]]*[greenNorthVehicles[right_lane]];
-//				
-//gar trig [true]*[vehiclesNorth[straight_lane] != NONE & !greenNorthVehicles[straight_lane]] |=> 
-//				[!greenNorthVehicles[straight_lane]]*[greenNorthVehicles[straight_lane]];
-//				
-//gar trig [true]*[vehiclesNorth[left_lane] != NONE & !greenNorthVehicles[left_lane]] |=> 
-//				[!greenNorthVehicles[left_lane]]*[greenNorthVehicles[left_lane]];
-//
-//gar trig [true]*[vehiclesSouth[right_lane] != NONE & !greenSouthVehicles[right_lane]] |=> 
-//				[!greenSouthVehicles[right_lane]]*[greenSouthVehicles[right_lane]];
-//				
-//gar trig [true]*[vehiclesSouth[straight_lane] != NONE & !greenSouthVehicles[straight_lane]] |=> 
-//				[!greenSouthVehicles[straight_lane]]*[greenSouthVehicles[straight_lane]];
-//				
-//gar trig [true]*[vehiclesSouth[left_lane] != NONE & !greenSouthVehicles[left_lane]] |=> 
-//				[!greenSouthVehicles[left_lane]]*[greenSouthVehicles[left_lane]];

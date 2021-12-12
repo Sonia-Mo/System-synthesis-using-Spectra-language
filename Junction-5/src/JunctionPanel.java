@@ -191,14 +191,14 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	 */
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		this._pauseTime = this._pauseTime == 10 ? 0 : this._pauseTime + 1;
+		this._pauseTime = this._pauseTime == 100 ? 0 : this._pauseTime + 1;
 		
 		updateCars();
 		updatePedestrians();
 		updateFog();
 		repaint();
-		Random rand = new Random();
-
+		Random rand = new Random();		
+		
 		// get a new state from the controller if no cars or pedestrians are crossing
 		if (!isCarsCrossing() && !isPedsCrossing()) {
 			if (rand.nextBoolean()) {
@@ -211,8 +211,20 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 				createPedestrian(100);
 			}
 			
-			if (this._cars.size() + this._pedestrians.size() != 0 || this._pauseTime == 10)
+			if (this._pauseTime > 20) {
+				this._isClosedRoadAction = rand.nextBoolean();
+				this._isFogAction = rand.nextBoolean();
+			}
+			else {
+				this._isClosedRoadAction = false;
+				this._isFogAction = false;
+			}
+
+			if (this._cars.size() + this._pedestrians.size() != 0 || this._pauseTime % 10 == 0) {
+				setRoadConstructions(this._isClosedRoadAction);
+				setFog(_isFogAction);
 				getNewState();
+			}
 		}
 
 	}
@@ -234,12 +246,10 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	}
 
 	private boolean displayRoadConstructions() { // check whether we need to display the construction image
-		boolean isClosedRoadAction = isClosedRoadAction();
-		if (!isClosedRoadAction) {
-			_isClosedRoadAction = false;
+		if (!this._isClosedRoadAction) {
 			return false;
 		}
-		boolean anyCarInRoadClosing = constructionsLanesAreClear(isClosedRoadAction, false);
+		boolean anyCarInRoadClosing = constructionsLanesAreClear(this._isClosedRoadAction, false);
 		if (_isClosedRoadAction != anyCarInRoadClosing) {
 			_isClosedRoadAction = anyCarInRoadClosing;
 		}
@@ -367,19 +377,7 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 			this._fog._x--;
 			if (this._fog.getX() == -1600)
 				this._fog._x = 0;
-			boolean isFogAction = isFogAction();
-			if (_isFogAction != isFogAction) {
-				_isFogAction = isFogAction;
-			}
 		}
-	}
-
-	private boolean isFogAction() {
-		return controller.getSysVariable("fogAction"); // get fog system variable from spectra
-	}
-
-	private boolean isClosedRoadAction() {
-		return controller.getSysVariable("closedRoadAction"); // get closed road system variable from spectra
 	}
 
 	public void free() {
