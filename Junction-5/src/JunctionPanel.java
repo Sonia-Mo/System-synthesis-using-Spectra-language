@@ -29,12 +29,15 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	private JunctionElement _fog; // fog image
 	private JunctionElement _closedRoad; // closed road image
 	private JunctionElement _loading; // image for waiting sign
+	private JunctionElement _freezeMode; // image for freeze mode
 	private HashMap<Integer, VehicleOptions> _carsInLanes = new HashMap<>(); // Map that indicates whether a lane is
 																				// occupied
 	private Timer _timer;
 	private int _pauseTime = 0;
+	private int _freezeTime = 0;
 	private boolean _isFogAction = false;
 	private boolean _isClosedRoadAction;
+	private boolean _isFreezeMode = false;
 
 	public JunctionPanel(MainFrame parentFrame) throws IOException {
 		super(ImageIO.read(new File("img/Images/junction800.png")), SCALED);
@@ -51,6 +54,8 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		this._loading = new JunctionElement(280, 360);
 		this._loading.loadImage("img/Images/ClearWait.png");
 		this._loading.setVisible(false);
+		this._freezeMode = new JunctionElement(365, 365);
+		this._freezeMode.loadImage("img/Images/freeze mode.png");
 		initTrafficLights();
 		this._timer.start();
 	}
@@ -180,6 +185,9 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		if (Boolean.parseBoolean(controller.getEnvVariable("foggy"))) { // paint fog image if needed
 			g2d.drawImage(this._fog.getImage(), this._fog.getX(), this._fog.getY(), this);
 		}
+		if (Boolean.parseBoolean(controller.getEnvVariable("freezeMode"))) {
+			g2d.drawImage(this._freezeMode.getImage(), this._freezeMode.getX(), this._freezeMode.getY(), this);
+		}
 		if (this._loading.isVisible()) { // paint "waiting for junction to clear" image
 			g2d.drawImage(this._loading.getImage(), this._loading.getX(), this._loading.getY(), this);
 		}
@@ -192,13 +200,34 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		this._pauseTime = this._pauseTime == 100 ? 0 : this._pauseTime + 1;
-		
+
 		updateCars();
 		updatePedestrians();
 		updateFog();
 		repaint();
-		Random rand = new Random();		
+		Random rand = new Random();
+		if (this._isFreezeMode) {
+			this._freezeTime = this._freezeTime == 30 ? 0 : this._freezeTime + 1;
+			this._isFreezeMode = false;
+		}
 		
+		if (this._pauseTime > 50) {
+			this._isClosedRoadAction = rand.nextBoolean();
+			if (!_isFreezeMode) {
+				this._isFogAction = rand.nextBoolean();
+				if (!this._isFogAction) {
+					this._isFreezeMode = rand.nextBoolean();
+				}
+			} else {
+				this._isFogAction = false;
+			}
+			
+		} else {
+			this._isClosedRoadAction = false;
+			this._isFogAction = false;
+			this._isFreezeMode = false;;
+		}
+
 		// get a new state from the controller if no cars or pedestrians are crossing
 		if (!isCarsCrossing() && !isPedsCrossing()) {
 			if (rand.nextBoolean()) {
@@ -209,20 +238,12 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 			}
 			if (rand.nextBoolean()) {
 				createPedestrian(100);
-			}
-			
-			if (this._pauseTime > 20) {
-				this._isClosedRoadAction = rand.nextBoolean();
-				this._isFogAction = rand.nextBoolean();
-			}
-			else {
-				this._isClosedRoadAction = false;
-				this._isFogAction = false;
-			}
+			}	
 
 			if (this._cars.size() + this._pedestrians.size() != 0 || this._pauseTime % 10 == 0) {
 				setRoadConstructions(this._isClosedRoadAction);
 				setFog(_isFogAction);
+				setFreezeMode(this._isFreezeMode);
 				getNewState();
 			}
 		}
@@ -378,6 +399,10 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 			if (this._fog.getX() == -1600)
 				this._fog._x = 0;
 		}
+	}
+
+	public void setFreezeMode(boolean freezeMode) {
+		controller.updateEnvVariable("freezeMode", String.valueOf(freezeMode));
 	}
 
 	public void free() {

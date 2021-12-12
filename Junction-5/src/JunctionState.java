@@ -44,10 +44,7 @@ class JunctionState {
 		// env
 		stateEnvMap.put("foggy", "false");
 		stateEnvMap.put("roadConstructions", "false");
-		// sys
-		stateSysMap.put("fogAction", "false");
-		stateSysMap.put("closedRoadAction", "false");
-
+		stateEnvMap.put("freezeMode", "false");
 	}
 
 	public HashMap<String, String> getEnvState() {
