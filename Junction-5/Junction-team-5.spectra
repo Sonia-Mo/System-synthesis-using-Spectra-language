@@ -156,7 +156,7 @@ gar alw !greenNorthVehicles[left_lane] & !greenSouthVehicles[right_lane] & pedes
 gar alw greenNorthVehicles[left_lane] | greenSouthVehicles[right_lane] | !pedestriansEastPressed[south] ->
 		!greenEastPedestrians[south];
 		
-// ========================== Assume there will always be a traffic in some point ==========================
+// ========================== Assume there will always be a traffic at some point ==========================
 
 asm alwEv vehiclesNorth[left_lane] != NONE;
 asm alwEv vehiclesNorth[straight_lane] != NONE;

@@ -17,7 +17,7 @@ class PedestrianTrafficLight extends JunctionElement {
 
 	public void changeColor(int newColor) {
 		if (this._trafficLightColor != newColor) {
-			String stateToFileName = "img/Images/pedLight/" + Integer.toString(newColor) + ".png";
+			String stateToFileName = "img/pedLight/" + Integer.toString(newColor) + ".png";
 			loadImage(stateToFileName);
 			getImageDimensions();
 			this._trafficLightColor = newColor;
