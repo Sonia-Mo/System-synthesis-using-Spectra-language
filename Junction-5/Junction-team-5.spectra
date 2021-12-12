@@ -279,8 +279,15 @@ gar alw vehiclesNorth[left_lane] = EMERGENCY & (vehiclesSouth[straight_lane] != 
 
 // ========================== Freeze mode ==========================
 
-asm alw !(freezeMode & foggy);
 asm alwEv !freezeMode;
+
+// Assumed that freeze mode and fog can't occur together
+asm alw !(freezeMode & foggy);
+
+// In case that freeze mode is on and the south straight lane traffic light is green, there 
+// can't be road constructions.								
+asm alw greenSouthVehicles[straight_lane] & next(freezeMode) -> !next(roadConstructions);
+
 gar alw next(freezeMode) -> greenNorthVehicles[straight_lane] = next(greenNorthVehicles[straight_lane]) &
 					greenNorthVehicles[right_lane] = next(greenNorthVehicles[right_lane]) &
 					greenNorthVehicles[left_lane] = next(greenNorthVehicles[left_lane]) &
@@ -293,5 +300,5 @@ gar alw next(freezeMode) -> greenNorthVehicles[straight_lane] = next(greenNorthV
 					greenNorthPedestrians[east] = next(greenNorthPedestrians[east]) &
 					greenSouthPedestrians[west] = next(greenSouthPedestrians[west]) & 
 					greenSouthPedestrians[east] = next(greenSouthPedestrians[east]);
-								
+
 

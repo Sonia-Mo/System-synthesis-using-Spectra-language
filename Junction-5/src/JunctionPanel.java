@@ -14,10 +14,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.TimerTask;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
-import javax.swing.Timer;
 
 @SuppressWarnings("serial")
 public class JunctionPanel extends BackgroundPanel implements ActionListener {
@@ -32,9 +32,13 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	private JunctionElement _freezeMode; // image for freeze mode
 	private HashMap<Integer, VehicleOptions> _carsInLanes = new HashMap<>(); // Map that indicates whether a lane is
 																				// occupied
-	private Timer _timer;
-	private int _pauseTime = 0;
-	private int _freezeTime = 0;
+	private javax.swing.Timer _timer;
+	private int _eventTimer = 0;
+	private int _freezeModeTimer = 0;
+	private int _roadConstructionTimer = 0;
+	private int _fogTimer = 0;
+	private int _trafficTimer = 0;
+
 	private boolean _isFogAction = false;
 	private boolean _isClosedRoadAction;
 	private boolean _isFreezeMode = false;
@@ -45,7 +49,8 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		setPreferredSize(new Dimension(800, 800));
 		this._pedestrians = new ArrayList<Pedestrian>();
 		this._cars = new ArrayList<Car>();
-		this._timer = new Timer(100, this);
+		this._timer = new javax.swing.Timer(100, this);
+
 		this._fog = new JunctionElement(0, 0);
 		this._fog.setVisible(false);
 		this._fog.loadImage("img/Images/fog.png");
@@ -192,6 +197,62 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 			g2d.drawImage(this._loading.getImage(), this._loading.getX(), this._loading.getY(), this);
 		}
 	}
+	
+	// Randomize environment events (freeze mode, road construction, fog). 
+	// Every time an event occurs it stays on for a fixed period of time.
+	private void randomizeEnvEvents() {
+		Random rand = new Random();
+		if (this._isFreezeMode) { // Stay frozen for a whole cycle
+			this._freezeModeTimer = (this._freezeModeTimer + 1) % 30;
+			if (this._freezeModeTimer == 0) {
+				this._isFreezeMode = false;
+			}
+		}
+
+		if (this._isClosedRoadAction) { // Stay closed for a whole cycle
+			this._roadConstructionTimer = (this._roadConstructionTimer + 1) % 30;
+			if (this._roadConstructionTimer == 0) {
+				this._isClosedRoadAction = false;
+			}
+		}
+
+		if (this._isFogAction) { // Stay foggy for a whole cycle
+			this._fogTimer = (this._fogTimer + 1) % 30;
+			this._isFogAction = false;
+		}
+
+		if (timeForEvent()) { // Create events only when allowed 
+			// Assume that fog and freeze mode can not occur together 
+			if (!this._isFogAction && !this._isFreezeMode) {
+				this._isFogAction = rand.nextBoolean();
+				if (!this._isFogAction) { 
+					this._isFreezeMode = rand.nextBoolean();
+				}
+			}
+			if (!this._isClosedRoadAction) {
+				this._isClosedRoadAction = rand.nextBoolean();
+			}
+		}
+	}
+	
+	private boolean timeForEvent() {
+		this._eventTimer = this._eventTimer == 100 ? 0 : this._eventTimer + 1;
+		return this._eventTimer > 50;
+	}
+
+	// Inject traffic periodically every timer cycle
+	private void injectTraffic() {
+		if (this._trafficTimer == 0) {
+			for (int i = 0; i < 3; i++) {
+				createPedestrian(100);
+				createVehicle(false);
+				createVehicle(true);
+			}
+			createVehicle(false);
+			createVehicle(true);
+		}	
+		this._trafficTimer = (this._trafficTimer + 1) % 160;
+	}
 
 	/*
 	 * this method is being called every 25ms and updates the elements state TODO:
@@ -199,60 +260,34 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	 */
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		this._pauseTime = this._pauseTime == 100 ? 0 : this._pauseTime + 1;
-
 		updateCars();
 		updatePedestrians();
 		updateFog();
 		repaint();
-		Random rand = new Random();
-		if (this._isFreezeMode) {
-			this._freezeTime = this._freezeTime == 30 ? 0 : this._freezeTime + 1;
-			this._isFreezeMode = false;
-		}
 		
-		if (this._pauseTime > 50) {
-			this._isClosedRoadAction = rand.nextBoolean();
-			if (!_isFreezeMode) {
-				this._isFogAction = rand.nextBoolean();
-				if (!this._isFogAction) {
-					this._isFreezeMode = rand.nextBoolean();
-				}
-			} else {
-				this._isFogAction = false;
-			}
-			
-		} else {
-			this._isClosedRoadAction = false;
-			this._isFogAction = false;
-			this._isFreezeMode = false;;
-		}
-
+		randomizeEnvEvents(); // Randomize env variables
+		injectTraffic(); // Inject traffic into the junction
+		
 		// get a new state from the controller if no cars or pedestrians are crossing
 		if (!isCarsCrossing() && !isPedsCrossing()) {
-			if (rand.nextBoolean()) {
-				createVehicle(false);
+			
+			// Assume that while freeze mode is on and the south straight lane traffic light is green, 
+			// then road construction should be false. 
+			if (this._isFreezeMode && this._isClosedRoadAction && controller.getSysVariable("greenSouthVehicles[1]")) {
+				this._isClosedRoadAction = false;
 			}
-			if (rand.nextBoolean()) {
-				createVehicle(true);
-			}
-			if (rand.nextBoolean()) {
-				createPedestrian(100);
-			}	
-
-			if (this._cars.size() + this._pedestrians.size() != 0 || this._pauseTime % 10 == 0) {
-				setRoadConstructions(this._isClosedRoadAction);
-				setFog(_isFogAction);
-				setFreezeMode(this._isFreezeMode);
-				getNewState();
-			}
+			
+			// Assign env variables to spectra specification
+			setRoadConstructions(this._isClosedRoadAction);
+			setFog(_isFogAction);
+			setFreezeMode(this._isFreezeMode);
+			getNewState();
 		}
-
 	}
 
 	public void setRoadConstructions(boolean closed) {
-		controller.updateEnvVariable("roadConstructions", String.valueOf(closed)); // update spectra for env road
-																					// construction
+		// Update spectra for env road construction
+		controller.updateEnvVariable("roadConstructions", String.valueOf(closed)); 
 	}
 
 	private boolean constructionsLanesAreClear(boolean init, boolean ignoreState) {
@@ -266,18 +301,16 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		return anyCarInRoadClosing;
 	}
 
-	private boolean displayRoadConstructions() { // check whether we need to display the construction image
-		if (!this._isClosedRoadAction) {
+	private boolean displayRoadConstructions() { // Check whether we need to display the construction image
+		boolean roadConstructions = Boolean.parseBoolean(controller.getEnvVariable("roadConstructions"));
+		if (!roadConstructions) {
 			return false;
 		}
-		boolean anyCarInRoadClosing = constructionsLanesAreClear(this._isClosedRoadAction, false);
-		if (_isClosedRoadAction != anyCarInRoadClosing) {
-			_isClosedRoadAction = anyCarInRoadClosing;
-		}
+		boolean anyCarInRoadClosing = constructionsLanesAreClear(roadConstructions, false);
 		return anyCarInRoadClosing;
 	}
 
-	/* checks whether a pedestrian is crossing */
+	// Checks whether a pedestrian is crossing 
 	private boolean isPedsCrossing() {
 		for (Pedestrian p : _pedestrians) {
 			if (p.getPedestrianState() == PedestrianState.CROSSING_FIRST
@@ -287,7 +320,7 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		return false;
 	}
 
-	/* checks whether a car is crossing */
+	// Checks whether a car is crossing 
 	private boolean isCarsCrossing() {
 		for (Car car : _cars) {
 			if (car.getCarState() == CarState.CROSSING)
@@ -389,7 +422,6 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	}
 
 	public void setFog(boolean isFoggy) {
-		this._fog.setVisible(isFoggy);
 		controller.updateEnvVariable("foggy", String.valueOf(isFoggy)); // update spectra env variable
 	}
 
