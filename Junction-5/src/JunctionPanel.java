@@ -14,10 +14,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
-import javax.swing.Timer;
 
 @SuppressWarnings("serial")
 public class JunctionPanel extends BackgroundPanel implements ActionListener {
@@ -29,12 +30,22 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	private JunctionElement _fog; // fog image
 	private JunctionElement _closedRoad; // closed road image
 	private JunctionElement _loading; // image for waiting sign
+	private JunctionElement _freezeMode; // image for freeze mode
 	private HashMap<Integer, VehicleOptions> _carsInLanes = new HashMap<>(); // Map that indicates whether a lane is
 																				// occupied
-	private Timer _timer;
-	private int _pauseTime = 0;
-	private boolean _isFogAction = false;
-	private boolean _isClosedRoadAction;
+	private javax.swing.Timer _timer;
+	
+	private boolean eventTime = true;
+
+	private JunctionTimer eventTimer = new JunctionTimer();
+	private JunctionTimer trafficTimer = new JunctionTimer();
+	private JunctionTimer freezeModeTimer = new JunctionTimer();
+	private JunctionTimer fogTimer = new JunctionTimer();
+	private JunctionTimer roadConstructionTimer = new JunctionTimer();
+
+	boolean _isFogAction;
+	boolean _isClosedRoadAction;
+	boolean _isFreezeMode;
 
 	public JunctionPanel(MainFrame parentFrame) throws IOException {
 		super(ImageIO.read(new File("img/Images/junction800.png")), SCALED);
@@ -42,7 +53,8 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		setPreferredSize(new Dimension(800, 800));
 		this._pedestrians = new ArrayList<Pedestrian>();
 		this._cars = new ArrayList<Car>();
-		this._timer = new Timer(100, this);
+		this._timer = new javax.swing.Timer(100, this);
+
 		this._fog = new JunctionElement(0, 0);
 		this._fog.setVisible(false);
 		this._fog.loadImage("img/Images/fog.png");
@@ -51,6 +63,8 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		this._loading = new JunctionElement(280, 360);
 		this._loading.loadImage("img/Images/ClearWait.png");
 		this._loading.setVisible(false);
+		this._freezeMode = new JunctionElement(365, 365);
+		this._freezeMode.loadImage("img/Images/freeze mode.png");
 		initTrafficLights();
 		this._timer.start();
 	}
@@ -180,8 +194,58 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		if (Boolean.parseBoolean(controller.getEnvVariable("foggy"))) { // paint fog image if needed
 			g2d.drawImage(this._fog.getImage(), this._fog.getX(), this._fog.getY(), this);
 		}
+		if (Boolean.parseBoolean(controller.getEnvVariable("freezeMode"))) {
+			g2d.drawImage(this._freezeMode.getImage(), this._freezeMode.getX(), this._freezeMode.getY(), this);
+		}
 		if (this._loading.isVisible()) { // paint "waiting for junction to clear" image
 			g2d.drawImage(this._loading.getImage(), this._loading.getX(), this._loading.getY(), this);
+		}
+	}
+	
+	private boolean timeForEvent() {
+		// if timer is over, switch eventTime value and set a new timer
+		if (!eventTimer.isOn()) {
+			eventTime = !eventTime;
+			if (eventTime) {
+				eventTimer.startTimer(2000);
+			}
+			else {
+				eventTimer.startTimer(4000);
+			}
+		}
+		return eventTime;
+	}
+
+	private void addEvents() {
+		Random rand = new Random();
+		// Assume that fog and freeze mode can not occur together
+		if (!fogTimer.isOn() && !freezeModeTimer.isOn()) {
+			boolean fogOn = rand.nextBoolean();
+			if (fogOn) {
+				fogTimer.startTimer(3000);
+			}
+			else {
+				freezeModeTimer.startTimer(5000);	
+			}
+		}
+		if (!roadConstructionTimer.isOn()) {
+			if (rand.nextBoolean());
+				roadConstructionTimer.startTimer(4000);
+		}
+	}
+
+	// Inject traffic periodically every timer cycle
+	private void injectTraffic() {
+		Random rand = new Random();
+		if (!trafficTimer.isOn() && !isCarsCrossing() && !isPedsCrossing()) {
+			if (rand.nextBoolean())
+				createPedestrian(100);
+			if (rand.nextBoolean())
+				createVehicle(false);
+			if (rand.nextBoolean())
+				createVehicle(true);
+			
+			trafficTimer.startTimer(400);
 		}
 	}
 
@@ -191,24 +255,35 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	 */
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		this._pauseTime = this._pauseTime == 10 ? 0 : this._pauseTime + 1;
-
 		updateCars();
 		updatePedestrians();
 		updateFog();
 		repaint();
 
+		if (timeForEvent()) {
+			addEvents();
+		}
+		injectTraffic(); // Inject traffic into the junction
+
 		// get a new state from the controller if no cars or pedestrians are crossing
 		if (!isCarsCrossing() && !isPedsCrossing()) {
-			if (this._cars.size() + this._pedestrians.size() != 0 || this._pauseTime == 10)
-				getNewState();
+			// Assign env variables to spectra specification
+			// Assume that while freeze mode is on and the south straight lane traffic light
+			// is green, then road construction should be false.
+			if (freezeModeTimer.isOn() && roadConstructionTimer.isOn() && controller.getSysVariable("greenSouthVehicles[1]")) {
+				setRoadConstructions(false);
+			} else {
+				setRoadConstructions(roadConstructionTimer.isOn());
+			}
+			setFog(fogTimer.isOn());
+			setFreezeMode(freezeModeTimer.isOn());
+			getNewState();
 		}
-
 	}
 
 	public void setRoadConstructions(boolean closed) {
-		controller.updateEnvVariable("roadConstructions", String.valueOf(closed)); // update spectra for env road
-																					// construction
+		// Update spectra for env road construction
+		controller.updateEnvVariable("roadConstructions", String.valueOf(closed));
 	}
 
 	private boolean constructionsLanesAreClear(boolean init, boolean ignoreState) {
@@ -222,20 +297,16 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		return anyCarInRoadClosing;
 	}
 
-	private boolean displayRoadConstructions() { // check whether we need to display the construction image
-		boolean isClosedRoadAction = isClosedRoadAction();
-		if (!isClosedRoadAction) {
-			_isClosedRoadAction = false;
+	private boolean displayRoadConstructions() { // Check whether we need to display the construction image
+		boolean roadConstructions = Boolean.parseBoolean(controller.getEnvVariable("roadConstructions"));
+		if (!roadConstructions) {
 			return false;
 		}
-		boolean anyCarInRoadClosing = constructionsLanesAreClear(isClosedRoadAction, false);
-		if (_isClosedRoadAction != anyCarInRoadClosing) {
-			_isClosedRoadAction = anyCarInRoadClosing;
-		}
+		boolean anyCarInRoadClosing = constructionsLanesAreClear(roadConstructions, false);
 		return anyCarInRoadClosing;
 	}
 
-	/* checks whether a pedestrian is crossing */
+	// Checks whether a pedestrian is crossing
 	private boolean isPedsCrossing() {
 		for (Pedestrian p : _pedestrians) {
 			if (p.getPedestrianState() == PedestrianState.CROSSING_FIRST
@@ -245,7 +316,7 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		return false;
 	}
 
-	/* checks whether a car is crossing */
+	// Checks whether a car is crossing
 	private boolean isCarsCrossing() {
 		for (Car car : _cars) {
 			if (car.getCarState() == CarState.CROSSING)
@@ -347,7 +418,6 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	}
 
 	public void setFog(boolean isFoggy) {
-		this._fog.setVisible(isFoggy);
 		controller.updateEnvVariable("foggy", String.valueOf(isFoggy)); // update spectra env variable
 	}
 
@@ -356,19 +426,11 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 			this._fog._x--;
 			if (this._fog.getX() == -1600)
 				this._fog._x = 0;
-			boolean isFogAction = isFogAction();
-			if (_isFogAction != isFogAction) {
-				_isFogAction = isFogAction;
-			}
 		}
 	}
 
-	private boolean isFogAction() {
-		return controller.getSysVariable("fogAction"); // get fog system variable from spectra
-	}
-
-	private boolean isClosedRoadAction() {
-		return controller.getSysVariable("closedRoadAction"); // get closed road system variable from spectra
+	public void setFreezeMode(boolean freezeMode) {
+		controller.updateEnvVariable("freezeMode", String.valueOf(freezeMode));
 	}
 
 	public void free() {

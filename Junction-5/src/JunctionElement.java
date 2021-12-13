@@ -46,7 +46,7 @@ class JunctionElement {
         return this._y;
     }
 
-    public boolean isVisible() {
+	public boolean isVisible() {
         return this._visible;
     }
 

@@ -2,13 +2,11 @@ import "./patterns/DwyerPatternsNamed.spectra"
 
 spec JunctionModule
 
-
 // *********************************************
 // *** define type of all possible vehicles  ***
 // *********************************************
 
 type Vehicle = {NONE, CAR, EMERGENCY};
-
 
 // ****************************************************************************************
 // *** cars arrays env variables, index 0 - right , index 1 - straight , index 2 - left ***
@@ -16,7 +14,6 @@ type Vehicle = {NONE, CAR, EMERGENCY};
 
 env Vehicle[3] vehiclesNorth;
 env Vehicle[3] vehiclesSouth;
-
 
 // ************************************************************
 // *** pedestrians arrays env variables                     ***
@@ -29,20 +26,19 @@ env boolean[2] pedestriansSouthPressed;
 env boolean[2] pedestriansEastPressed;
 env boolean[2] pedestriansWestPressed;
 
-
 // ***********************************************
 // *** special climate heavy fog env variable ***
 // ***********************************************
 
 env boolean foggy;
-
+asm alwEv !foggy;
 
 // *********************************************
 // *** north road constructions env variable ***
 // *********************************************
 
 env boolean roadConstructions;
-
+asm alwEv !roadConstructions;
 
 // *******************************************************************************************************
 // *** cars traffic lights arrays sys variables, index 0 - right , index 1 - straight , index 2 - left ***
@@ -50,7 +46,6 @@ env boolean roadConstructions;
 
 sys boolean[3] greenNorthVehicles;
 sys boolean[3] greenSouthVehicles;
-
 
 // ************************************************************
 // *** pedestrians traffic lights arrays sys variables      ***
@@ -68,7 +63,238 @@ sys boolean[2] greenWestPedestrians;
 env boolean freezeMode;
 env boolean manualMode;
 
-//--------------------------------------------- Implementation from here --------------------------------
-//-------------------------------------------------------------------------------------------------------
+// ***************** Defines *****************
+define right_lane := 0;
+define straight_lane := 1;
+define left_lane := 2;
 
-//TODO: Implement your specification
+define north := 0;
+define south := 1;
+define west := 0;
+define east := 1;
+
+//====================================================================================================================
+//============================================= Implementation from here =============================================
+//====================================================================================================================
+
+// ============================== Vehicles road logic ==============================
+
+// ----- North right lane logic -----
+gar alw !greenWestPedestrians[north] & !greenNorthPedestrians[west] & 
+		(vehiclesNorth[right_lane] = CAR & !foggy | vehiclesNorth[right_lane] = EMERGENCY) & !freezeMode -> 
+		greenNorthVehicles[right_lane];
+gar alw (greenWestPedestrians[north] | greenNorthPedestrians[west] | 
+		!(vehiclesNorth[right_lane] = CAR & !foggy | vehiclesNorth[right_lane] = EMERGENCY)) & !freezeMode -> 
+		!greenNorthVehicles[right_lane];
+
+// ----- North straight lane logic -----
+gar alw !greenSouthPedestrians[west] & !greenNorthPedestrians[west] & !greenSouthVehicles[left_lane] &
+		(vehiclesNorth[straight_lane] = CAR & !foggy | vehiclesNorth[straight_lane] = EMERGENCY) & !freezeMode -> 
+		greenNorthVehicles[straight_lane];
+gar alw (greenSouthPedestrians[west] | greenNorthPedestrians[west] | greenSouthVehicles[left_lane] |
+		!(vehiclesNorth[straight_lane] = CAR & !foggy | vehiclesNorth[straight_lane] = EMERGENCY)) & !freezeMode -> 
+		!greenNorthVehicles[straight_lane];
+
+// ----- North left lane logic -----
+gar alw !greenEastPedestrians[south] & !greenNorthPedestrians[west] & !greenSouthVehicles[straight_lane] &
+		!greenSouthVehicles[left_lane] & (vehiclesNorth[left_lane] = CAR & !foggy | vehiclesNorth[left_lane] = EMERGENCY) & !freezeMode -> 
+		greenNorthVehicles[left_lane];
+gar alw (greenEastPedestrians[south] | greenNorthPedestrians[west] | greenSouthVehicles[straight_lane] |
+		greenSouthVehicles[left_lane] | !(vehiclesNorth[left_lane] = CAR & !foggy | vehiclesNorth[left_lane] = EMERGENCY)) & !freezeMode  ->
+		!greenNorthVehicles[left_lane];
+		
+// ----- South right lane logic -----
+gar alw !greenEastPedestrians[south] & !greenSouthPedestrians[east] & 
+		(vehiclesSouth[right_lane] = CAR & !foggy | vehiclesSouth[right_lane] = EMERGENCY) & !freezeMode -> 
+		greenSouthVehicles[right_lane];
+gar alw (greenEastPedestrians[south] | greenSouthPedestrians[east] | 
+		!(vehiclesSouth[right_lane] = CAR & !foggy | vehiclesSouth[right_lane] = EMERGENCY)) & !freezeMode  -> 
+		!greenSouthVehicles[right_lane];
+
+// ----- South straight lane logic -----
+gar alw !greenNorthPedestrians[east] & !greenSouthPedestrians[east] & !greenNorthVehicles[left_lane] &
+		(vehiclesSouth[straight_lane] = CAR & !foggy | vehiclesSouth[straight_lane] = EMERGENCY) & 
+		!roadConstructions & !freezeMode -> greenSouthVehicles[straight_lane];
+gar alw (greenNorthPedestrians[east] | greenSouthPedestrians[east] | greenNorthVehicles[left_lane] |
+		!(vehiclesSouth[straight_lane] = CAR & !foggy | vehiclesSouth[straight_lane] = EMERGENCY) | roadConstructions) & !freezeMode -> 
+		!greenSouthVehicles[straight_lane];
+
+// ----- South left lane logic -----
+gar alw !greenWestPedestrians[north] & !greenSouthPedestrians[east] & !greenNorthVehicles[straight_lane] &
+		!greenNorthVehicles[left_lane] & (vehiclesSouth[left_lane] = CAR & !foggy | vehiclesSouth[left_lane] = EMERGENCY) & 
+		!freezeMode -> greenSouthVehicles[left_lane];
+gar alw (greenWestPedestrians[north] | greenSouthPedestrians[east] | greenNorthVehicles[straight_lane] |
+		greenNorthVehicles[left_lane] | !(vehiclesSouth[left_lane] = CAR & !foggy | vehiclesSouth[left_lane] = EMERGENCY)) & !freezeMode -> 
+		!greenSouthVehicles[left_lane];
+
+// ============================== Pedestrian crosswalks logic ==============================
+
+// East-North and West-South crosswalks are always green
+gar alw greenEastPedestrians[north];
+gar alw greenWestPedestrians[south];
+
+// ----- North-West pedestrian crosswalk logic -----
+gar alw !greenNorthVehicles[right_lane] & !greenNorthVehicles[straight_lane] & !greenNorthVehicles[left_lane] &
+		pedestriansNorthPressed[west] & !freezeMode -> greenNorthPedestrians[west];
+gar alw (greenNorthVehicles[right_lane] | greenNorthVehicles[straight_lane] | greenNorthVehicles[left_lane] |
+		!pedestriansNorthPressed[west]) & !freezeMode -> !greenNorthPedestrians[west];
+
+// ----- South-West pedestrian crosswalk logic -----
+gar alw !greenNorthVehicles[straight_lane] & pedestriansSouthPressed[west] & !freezeMode -> greenSouthPedestrians[west];
+gar alw (greenNorthVehicles[straight_lane] | !pedestriansSouthPressed[west])& !freezeMode -> !greenSouthPedestrians[west];
+
+// ----- South-East pedestrian crosswalk logic -----
+gar alw !greenSouthVehicles[right_lane] & !greenSouthVehicles[straight_lane] & !greenSouthVehicles[left_lane] &
+		pedestriansSouthPressed[east] & !freezeMode -> greenSouthPedestrians[east];
+gar alw (greenSouthVehicles[right_lane] | greenSouthVehicles[straight_lane] | greenSouthVehicles[left_lane] |
+		!pedestriansSouthPressed[east]) & !freezeMode -> !greenSouthPedestrians[east];
+
+// ----- North-East pedestrian crosswalk logic -----
+gar alw !greenSouthVehicles[straight_lane] & pedestriansNorthPressed[east] & !freezeMode -> greenNorthPedestrians[east];
+gar alw (greenSouthVehicles[straight_lane] | !pedestriansNorthPressed[east]) & !freezeMode -> !greenNorthPedestrians[east];
+
+// ----- West-North pedestrian crosswalk logic -----
+gar alw !greenNorthVehicles[right_lane] & !greenSouthVehicles[left_lane] & pedestriansWestPressed[north] & !freezeMode ->
+		greenWestPedestrians[north];
+gar alw (greenNorthVehicles[right_lane] | greenSouthVehicles[left_lane] | !pedestriansWestPressed[north]) & !freezeMode ->
+		!greenWestPedestrians[north];
+
+// ----- East-South pedestrian crosswalk logic -----
+gar alw !greenNorthVehicles[left_lane] & !greenSouthVehicles[right_lane] & pedestriansEastPressed[south] & !freezeMode ->
+		greenEastPedestrians[south];
+gar alw (greenNorthVehicles[left_lane] | greenSouthVehicles[right_lane] | !pedestriansEastPressed[south]) & !freezeMode ->
+		!greenEastPedestrians[south];
+		
+// ========================== Assume there will always be a traffic at some point ==========================
+
+asm alwEv vehiclesNorth[left_lane] != NONE;
+asm alwEv vehiclesNorth[straight_lane] != NONE;
+asm alwEv vehiclesNorth[right_lane] != NONE;
+asm alwEv vehiclesSouth[left_lane] != NONE;
+asm alwEv vehiclesSouth[straight_lane] != NONE;
+asm alwEv vehiclesSouth[right_lane] != NONE;
+
+asm alwEv pedestriansEastPressed[north];
+asm alwEv pedestriansEastPressed[south];
+asm alwEv pedestriansWestPressed[north];
+asm alwEv pedestriansWestPressed[south];
+asm alwEv pedestriansNorthPressed[west];
+asm alwEv pedestriansNorthPressed[east];
+asm alwEv pedestriansSouthPressed[west];
+asm alwEv pedestriansSouthPressed[east];
+
+// ========================== Assume there will not always be traffic ==========================
+
+asm alwEv vehiclesNorth[left_lane] = NONE;
+asm alwEv vehiclesNorth[straight_lane] = NONE;
+asm alwEv vehiclesNorth[right_lane] = NONE;
+asm alwEv vehiclesSouth[left_lane] = NONE;
+asm alwEv vehiclesSouth[straight_lane] = NONE;
+asm alwEv vehiclesSouth[right_lane] = NONE;
+
+asm alwEv !pedestriansEastPressed[north];
+asm alwEv !pedestriansEastPressed[south];
+asm alwEv !pedestriansWestPressed[north];
+asm alwEv !pedestriansWestPressed[south];
+asm alwEv !pedestriansNorthPressed[west];
+asm alwEv !pedestriansNorthPressed[east];
+asm alwEv !pedestriansSouthPressed[west];
+asm alwEv !pedestriansSouthPressed[east];
+
+// ========================== Avoid traffic starvation ==========================
+
+gar alwEv vehiclesNorth[right_lane] != NONE & greenNorthVehicles[right_lane];
+gar alwEv vehiclesNorth[straight_lane] != NONE & greenNorthVehicles[straight_lane];
+gar alwEv vehiclesNorth[left_lane] != NONE & greenNorthVehicles[left_lane];
+gar alwEv vehiclesSouth[right_lane] != NONE & greenSouthVehicles[right_lane];
+gar alwEv vehiclesSouth[straight_lane] != NONE & greenSouthVehicles[straight_lane];
+gar alwEv vehiclesSouth[left_lane] != NONE & greenSouthVehicles[left_lane];
+
+gar alwEv pedestriansEastPressed[south] & greenEastPedestrians[south];
+gar alwEv pedestriansWestPressed[north] & greenWestPedestrians[north];
+gar alwEv pedestriansNorthPressed[west] & greenNorthPedestrians[west];
+gar alwEv pedestriansNorthPressed[east] & greenNorthPedestrians[east];
+gar alwEv pedestriansSouthPressed[west] & greenSouthPedestrians[west];
+gar alwEv pedestriansSouthPressed[east] & greenSouthPedestrians[east];
+
+// ========================== Pedestrians wait until there is a green light ==========================
+
+asm alw pedestriansNorthPressed[west] & !greenNorthPedestrians[west] -> next(pedestriansNorthPressed[west]);
+asm alw pedestriansNorthPressed[east] & !greenNorthPedestrians[east] -> next(pedestriansNorthPressed[east]);
+
+asm alw pedestriansSouthPressed[west] & !greenSouthPedestrians[west] -> next(pedestriansSouthPressed[west]);
+asm alw pedestriansSouthPressed[east] & !greenSouthPedestrians[east] -> next(pedestriansSouthPressed[east]);
+
+asm alw pedestriansWestPressed[north] & !greenWestPedestrians[north] -> next(pedestriansWestPressed[north]);
+asm alw pedestriansWestPressed[south] & !greenWestPedestrians[south] -> next(pedestriansWestPressed[south]);
+
+asm alw pedestriansEastPressed[north] & !greenEastPedestrians[north] -> next(pedestriansEastPressed[north]);
+asm alw pedestriansEastPressed[south] & !greenEastPedestrians[south] -> next(pedestriansEastPressed[south]);
+
+// ========================== Vehicles wait until there is a green light ==========================
+
+asm alw vehiclesNorth[right_lane] != NONE & !greenNorthVehicles[right_lane] -> 
+		next(vehiclesNorth[right_lane]) = vehiclesNorth[right_lane];
+asm alw vehiclesNorth[straight_lane] != NONE & !greenNorthVehicles[straight_lane] -> 
+		next(vehiclesNorth[straight_lane]) = vehiclesNorth[straight_lane];
+asm alw vehiclesNorth[left_lane] != NONE & !greenNorthVehicles[left_lane] -> 
+		next(vehiclesNorth[left_lane]) = vehiclesNorth[left_lane];
+
+asm alw vehiclesSouth[right_lane] != NONE & !greenSouthVehicles[right_lane] -> 
+		next(vehiclesSouth[right_lane]) = vehiclesSouth[right_lane];
+asm alw vehiclesSouth[straight_lane] != NONE & !greenSouthVehicles[straight_lane] -> 
+		next(vehiclesSouth[straight_lane]) = vehiclesSouth[straight_lane];
+asm alw vehiclesSouth[left_lane] != NONE & !greenSouthVehicles[left_lane] -> 
+		next(vehiclesSouth[left_lane]) = vehiclesSouth[left_lane];
+
+// ========================== Emergency priorities ==========================
+
+// South right lane emergency vehicle has priority over south-east and east-south pedestrians
+gar alw vehiclesSouth[right_lane] = EMERGENCY & !freezeMode -> !greenEastPedestrians[south] & !greenSouthPedestrians[east];
+
+// North right lane emergency vehicle has priority over north-west and west-north pedestrians
+gar alw vehiclesNorth[right_lane] = EMERGENCY & !freezeMode -> !greenWestPedestrians[north] & !greenNorthPedestrians[west];
+
+// South straight lane emergency vehicle has priority over north left lane vehicle, south-east and north-east pedestrians
+gar alw vehiclesSouth[straight_lane] = EMERGENCY & !roadConstructions & !freezeMode ->
+		!greenNorthVehicles[left_lane] & !greenSouthPedestrians[east] & !greenNorthPedestrians[east];
+
+// North straight lane emergency vehicle has priority over south left lane vehicle, south-west and north-west pedestrians
+gar alw vehiclesNorth[straight_lane] = EMERGENCY & !freezeMode ->
+		!greenSouthVehicles[left_lane] & !greenSouthPedestrians[west] & !greenNorthPedestrians[west];
+
+// South left lane emergency vehicle has priority over north straight lane non-emergency vehicle, north left lane emergency vehicle, 
+// and south-east and west-north pedestrians 
+gar alw vehiclesSouth[left_lane] = EMERGENCY & vehiclesNorth[straight_lane] != EMERGENCY & !freezeMode -> 
+		!greenNorthVehicles[straight_lane] & !greenNorthVehicles[left_lane] & !greenSouthPedestrians[east] & !greenWestPedestrians[north];
+
+// North left lane emergency vehicle has priority over south straight and left lanes non-emergency vehicles, 
+// and north-west and east-south pedestrians 		
+gar alw vehiclesNorth[left_lane] = EMERGENCY & (vehiclesSouth[straight_lane] != EMERGENCY | roadConstructions) & 
+		vehiclesSouth[left_lane] != EMERGENCY & !freezeMode -> 
+		!greenSouthVehicles[straight_lane] & !greenSouthVehicles[left_lane] & !greenNorthPedestrians[west] & !greenEastPedestrians[south];
+
+// ========================== Freeze mode ==========================
+
+asm alwEv !freezeMode;
+
+// Assumed that freeze mode and fog can't occur together
+asm alw !(freezeMode & foggy);
+
+// In case that freeze mode is on and the south straight lane traffic light is green, there 
+// can't be road constructions.								
+asm alw greenSouthVehicles[straight_lane] & next(freezeMode) -> !next(roadConstructions);
+
+gar alw next(freezeMode) -> greenNorthVehicles[straight_lane] = next(greenNorthVehicles[straight_lane]) &
+					greenNorthVehicles[right_lane] = next(greenNorthVehicles[right_lane]) &
+					greenNorthVehicles[left_lane] = next(greenNorthVehicles[left_lane]) &
+					greenSouthVehicles[straight_lane] = next(greenSouthVehicles[straight_lane]) &
+					greenSouthVehicles[right_lane] = next(greenSouthVehicles[right_lane]) &
+					greenSouthVehicles[left_lane] = next(greenSouthVehicles[left_lane]) &
+					greenEastPedestrians[south] = next(greenEastPedestrians[south]) &
+					greenWestPedestrians[north] = next(greenWestPedestrians[north]) &
+					greenNorthPedestrians[west] = next(greenNorthPedestrians[west]) & 
+					greenNorthPedestrians[east] = next(greenNorthPedestrians[east]) &
+					greenSouthPedestrians[west] = next(greenSouthPedestrians[west]) & 
+					greenSouthPedestrians[east] = next(greenSouthPedestrians[east]);
+
