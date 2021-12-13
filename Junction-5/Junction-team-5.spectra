@@ -203,19 +203,19 @@ asm alwEv !pedestriansSouthPressed[east];
 
 // ========================== Avoid traffic starvation ==========================
 
-gar alwEv vehiclesNorth[right_lane] != NONE & greenNorthVehicles[right_lane];
-gar alwEv vehiclesNorth[straight_lane] != NONE & greenNorthVehicles[straight_lane];
-gar alwEv vehiclesNorth[left_lane] != NONE & greenNorthVehicles[left_lane];
-gar alwEv vehiclesSouth[right_lane] != NONE & greenSouthVehicles[right_lane];
-gar alwEv vehiclesSouth[straight_lane] != NONE & greenSouthVehicles[straight_lane];
-gar alwEv vehiclesSouth[left_lane] != NONE & greenSouthVehicles[left_lane];
+gar alwEv greenNorthVehicles[right_lane];
+gar alwEv greenNorthVehicles[straight_lane];
+gar alwEv greenNorthVehicles[left_lane];
+gar alwEv greenSouthVehicles[right_lane];
+gar alwEv greenSouthVehicles[straight_lane];
+gar alwEv greenSouthVehicles[left_lane];
 
-gar alwEv pedestriansEastPressed[south] & greenEastPedestrians[south];
-gar alwEv pedestriansWestPressed[north] & greenWestPedestrians[north];
-gar alwEv pedestriansNorthPressed[west] & greenNorthPedestrians[west];
-gar alwEv pedestriansNorthPressed[east] & greenNorthPedestrians[east];
-gar alwEv pedestriansSouthPressed[west] & greenSouthPedestrians[west];
-gar alwEv pedestriansSouthPressed[east] & greenSouthPedestrians[east];
+gar alwEv greenEastPedestrians[south];
+gar alwEv greenWestPedestrians[north];
+gar alwEv greenNorthPedestrians[west];
+gar alwEv greenNorthPedestrians[east];
+gar alwEv greenSouthPedestrians[west];
+gar alwEv greenSouthPedestrians[east];
 
 // ========================== Pedestrians wait until there is a green light ==========================
 
