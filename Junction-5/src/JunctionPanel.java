@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
@@ -33,15 +34,18 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	private HashMap<Integer, VehicleOptions> _carsInLanes = new HashMap<>(); // Map that indicates whether a lane is
 																				// occupied
 	private javax.swing.Timer _timer;
-	private int _eventTimer = 0;
-	private int _freezeModeTimer = 0;
-	private int _roadConstructionTimer = 0;
-	private int _fogTimer = 0;
-	private int _trafficTimer = 0;
+	
+	private boolean eventTime = true;
 
-	private boolean _isFogAction = false;
-	private boolean _isClosedRoadAction;
-	private boolean _isFreezeMode = false;
+	private JunctionTimer eventTimer = new JunctionTimer();
+	private JunctionTimer trafficTimer = new JunctionTimer();
+	private JunctionTimer freezeModeTimer = new JunctionTimer();
+	private JunctionTimer fogTimer = new JunctionTimer();
+	private JunctionTimer roadConstructionTimer = new JunctionTimer();
+
+	boolean _isFogAction;
+	boolean _isClosedRoadAction;
+	boolean _isFreezeMode;
 
 	public JunctionPanel(MainFrame parentFrame) throws IOException {
 		super(ImageIO.read(new File("img/Images/junction800.png")), SCALED);
@@ -198,60 +202,51 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		}
 	}
 	
-	// Randomize environment events (freeze mode, road construction, fog). 
-	// Every time an event occurs it stays on for a fixed period of time.
-	private void randomizeEnvEvents() {
-		Random rand = new Random();
-		if (this._isFreezeMode) { // Stay frozen for a whole cycle
-			this._freezeModeTimer = (this._freezeModeTimer + 1) % 30;
-			if (this._freezeModeTimer == 0) {
-				this._isFreezeMode = false;
-			}
-		}
-
-		if (this._isClosedRoadAction) { // Stay closed for a whole cycle
-			this._roadConstructionTimer = (this._roadConstructionTimer + 1) % 30;
-			if (this._roadConstructionTimer == 0) {
-				this._isClosedRoadAction = false;
-			}
-		}
-
-		if (this._isFogAction) { // Stay foggy for a whole cycle
-			this._fogTimer = (this._fogTimer + 1) % 30;
-			this._isFogAction = false;
-		}
-
-		if (timeForEvent()) { // Create events only when allowed 
-			// Assume that fog and freeze mode can not occur together 
-			if (!this._isFogAction && !this._isFreezeMode) {
-				this._isFogAction = rand.nextBoolean();
-				if (!this._isFogAction) { 
-					this._isFreezeMode = rand.nextBoolean();
-				}
-			}
-			if (!this._isClosedRoadAction) {
-				this._isClosedRoadAction = rand.nextBoolean();
-			}
-		}
-	}
-	
 	private boolean timeForEvent() {
-		this._eventTimer = this._eventTimer == 100 ? 0 : this._eventTimer + 1;
-		return this._eventTimer > 50;
+		// if timer is over, switch eventTime value and set a new timer
+		if (!eventTimer.isOn()) {
+			eventTime = !eventTime;
+			if (eventTime) {
+				eventTimer.startTimer(2000);
+			}
+			else {
+				eventTimer.startTimer(4000);
+			}
+		}
+		return eventTime;
+	}
+
+	private void addEvents() {
+		Random rand = new Random();
+		// Assume that fog and freeze mode can not occur together
+		if (!fogTimer.isOn() && !freezeModeTimer.isOn()) {
+			boolean fogOn = rand.nextBoolean();
+			if (fogOn) {
+				fogTimer.startTimer(3000);
+			}
+			else {
+				freezeModeTimer.startTimer(5000);	
+			}
+		}
+		if (!roadConstructionTimer.isOn()) {
+			if (rand.nextBoolean());
+				roadConstructionTimer.startTimer(4000);
+		}
 	}
 
 	// Inject traffic periodically every timer cycle
 	private void injectTraffic() {
-		if (this._trafficTimer == 0) {
-			for (int i = 0; i < 3; i++) {
+		Random rand = new Random();
+		if (!trafficTimer.isOn() && !isCarsCrossing() && !isPedsCrossing()) {
+			if (rand.nextBoolean())
 				createPedestrian(100);
+			if (rand.nextBoolean())
 				createVehicle(false);
+			if (rand.nextBoolean())
 				createVehicle(true);
-			}
-			createVehicle(false);
-			createVehicle(true);
-		}	
-		this._trafficTimer = (this._trafficTimer + 1) % 160;
+			
+			trafficTimer.startTimer(400);
+		}
 	}
 
 	/*
@@ -264,30 +259,31 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		updatePedestrians();
 		updateFog();
 		repaint();
-		
-		randomizeEnvEvents(); // Randomize env variables
+
+		if (timeForEvent()) {
+			addEvents();
+		}
 		injectTraffic(); // Inject traffic into the junction
-		
+
 		// get a new state from the controller if no cars or pedestrians are crossing
 		if (!isCarsCrossing() && !isPedsCrossing()) {
-			
-			// Assume that while freeze mode is on and the south straight lane traffic light is green, 
-			// then road construction should be false. 
-			if (this._isFreezeMode && this._isClosedRoadAction && controller.getSysVariable("greenSouthVehicles[1]")) {
-				this._isClosedRoadAction = false;
-			}
-			
 			// Assign env variables to spectra specification
-			setRoadConstructions(this._isClosedRoadAction);
-			setFog(_isFogAction);
-			setFreezeMode(this._isFreezeMode);
+			// Assume that while freeze mode is on and the south straight lane traffic light
+			// is green, then road construction should be false.
+			if (freezeModeTimer.isOn() && roadConstructionTimer.isOn() && controller.getSysVariable("greenSouthVehicles[1]")) {
+				setRoadConstructions(false);
+			} else {
+				setRoadConstructions(roadConstructionTimer.isOn());
+			}
+			setFog(fogTimer.isOn());
+			setFreezeMode(freezeModeTimer.isOn());
 			getNewState();
 		}
 	}
 
 	public void setRoadConstructions(boolean closed) {
 		// Update spectra for env road construction
-		controller.updateEnvVariable("roadConstructions", String.valueOf(closed)); 
+		controller.updateEnvVariable("roadConstructions", String.valueOf(closed));
 	}
 
 	private boolean constructionsLanesAreClear(boolean init, boolean ignoreState) {
@@ -310,7 +306,7 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		return anyCarInRoadClosing;
 	}
 
-	// Checks whether a pedestrian is crossing 
+	// Checks whether a pedestrian is crossing
 	private boolean isPedsCrossing() {
 		for (Pedestrian p : _pedestrians) {
 			if (p.getPedestrianState() == PedestrianState.CROSSING_FIRST
@@ -320,7 +316,7 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		return false;
 	}
 
-	// Checks whether a car is crossing 
+	// Checks whether a car is crossing
 	private boolean isCarsCrossing() {
 		for (Car car : _cars) {
 			if (car.getCarState() == CarState.CROSSING)
