@@ -20,6 +20,12 @@ import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 
+enum Light {RED, GREEN};
+enum TrafficLight {VEHICLE_N_RIGHT, VEHICLE_N_STRAIGHT, VEHICLE_N_LEFT,
+	VEHICLE_S_RIGHT, VEHICLE_S_STRAIGHT, VEHICLE_S_LEFT,
+	PEDESTRIAN_NW, PEDESTRIAN_NE, PEDESTRIAN_WN, 
+	PEDESTRIAN_SW, PEDESTRIAN_SE, PEDESTRIAN_ES};
+
 @SuppressWarnings("serial")
 public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	private JunctionController controller = new JunctionController();
@@ -31,6 +37,7 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	private JunctionElement _closedRoad; // closed road image
 	private JunctionElement _loading; // image for waiting sign
 	private JunctionElement _freezeMode; // image for freeze mode
+	private JunctionElement _manualMode; // image for manual mode
 	private HashMap<Integer, VehicleOptions> _carsInLanes = new HashMap<>(); // Map that indicates whether a lane is
 																				// occupied
 	private javax.swing.Timer _timer;
@@ -42,10 +49,14 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	private JunctionTimer freezeModeTimer = new JunctionTimer();
 	private JunctionTimer fogTimer = new JunctionTimer();
 	private JunctionTimer roadConstructionTimer = new JunctionTimer();
+	private JunctionTimer manualModeTimer = new JunctionTimer();
 
 	boolean _isFogAction;
 	boolean _isClosedRoadAction;
 	boolean _isFreezeMode;
+	boolean _isManualMode;
+	TrafficLight manualTrafficLight = TrafficLight.VEHICLE_N_STRAIGHT;
+	Light trafficLightColor = Light.RED;
 
 	public JunctionPanel(MainFrame parentFrame) throws IOException {
 		super(ImageIO.read(new File("img/Images/junction800.png")), SCALED);
@@ -65,6 +76,8 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		this._loading.setVisible(false);
 		this._freezeMode = new JunctionElement(365, 365);
 		this._freezeMode.loadImage("img/Images/freeze mode.png");
+		this._manualMode = new JunctionElement(355, 355);
+		this._manualMode.loadImage("img/Images/manual mode.png");
 		initTrafficLights();
 		this._timer.start();
 	}
@@ -197,6 +210,9 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		if (Boolean.parseBoolean(controller.getEnvVariable("freezeMode"))) {
 			g2d.drawImage(this._freezeMode.getImage(), this._freezeMode.getX(), this._freezeMode.getY(), this);
 		}
+		if (Boolean.parseBoolean(controller.getEnvVariable("manualMode"))) {
+			g2d.drawImage(this._manualMode.getImage(), this._manualMode.getX(), this._manualMode.getY(), this);
+		}
 		if (this._loading.isVisible()) { // paint "waiting for junction to clear" image
 			g2d.drawImage(this._loading.getImage(), this._loading.getX(), this._loading.getY(), this);
 		}
@@ -218,12 +234,19 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	private void addEvents() {
 		Random rand = new Random();
 		// Assume that fog and freeze mode can not occur together
-		if (!fogTimer.isOn() && !freezeModeTimer.isOn()) {
-			boolean fogOn = rand.nextBoolean();
-			if (fogOn) {
+
+		if (!fogTimer.isOn() && !freezeModeTimer.isOn() && !manualModeTimer.isOn()) {
+			int event = rand.nextInt(3);
+			switch (event) {
+			case 1:
+				manualModeTimer.startTimer(6000);
+				break;
+			case 2:
 				fogTimer.startTimer(3000);
-			} else {
+				break;
+			case 3:
 				freezeModeTimer.startTimer(5000);
+				break;
 			}
 		}
 		if (!roadConstructionTimer.isOn()) {
@@ -235,12 +258,10 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 
 	// Inject traffic periodically every timer cycle
 	private void injectTraffic() {
-		Random rand = new Random();
 		if (!trafficTimer.isOn() && !isCarsCrossing() && !isPedsCrossing()) {
 			createPedestrian(100);
 			createVehicle(false);
 			createVehicle(true);
-
 			trafficTimer.startTimer(400);
 		}
 	}
@@ -263,24 +284,61 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 
 		// get a new state from the controller if no cars or pedestrians are crossing
 		if (!isCarsCrossing() && !isPedsCrossing()) {
-			// Assign env variables to spectra specification
-			// Assume that while freeze mode is on and the south straight lane traffic light
-			// is green, then road construction should be false.
-			if (freezeModeTimer.isOn() && roadConstructionTimer.isOn()
-					&& controller.getSysVariable("greenSouthVehicles[1]")) {
-				setRoadConstructions(false);
-			} else {
-				setRoadConstructions(roadConstructionTimer.isOn());
-			}
-			setFog(fogTimer.isOn());
-			setFreezeMode(freezeModeTimer.isOn());
+			// Assign env variables to spectra specification			
+			boolean roadConstruction = roadConstructionTimer.isOn();
+			boolean freezeMode = freezeModeTimer.isOn();
+			boolean fog = fogTimer.isOn();
+			boolean manualMode = manualModeTimer.isOn();
+
+			setRoadConstructions(roadConstruction);
+			setFog(fog);
+			setFreezeMode(freezeMode);
+			setManualMode(manualMode, roadConstruction); 
 			getNewState();
 		}
 	}
+	
+	// Set manual mode according to 'manual' value. If both 'manual' and 'roadConstruction' are true then
+	// manualTrafficLight is not allowed to be 'VEHICLE_S_STRAIGHT'
+	public void setManualMode(boolean manualMode, boolean roadConstruction) {		
+		roadConstruction = roadConstructionTimer.isOn();
+		Random rand = new Random();
+		trafficLightColor = Light.values()[rand.nextInt(2)];
+		do {
+			// keep choosing random value for manualTrafficLight to avoid the scenario where manual mode
+			// and road construction are on, and the value of manualTrafficLight is 'VEHICLE_S_STRAIGHT'.
+			manualTrafficLight = TrafficLight.values()[rand.nextInt(12)];
+		}
+		while (manualMode && roadConstruction && manualTrafficLight == TrafficLight.VEHICLE_S_STRAIGHT);
+		
+		controller.updateEnvVariable("manualMode", String.valueOf(manualMode));
+		controller.updateEnvVariable("manualTrafficLight", String.valueOf(manualTrafficLight));
+		controller.updateEnvVariable("trafficLightColor", String.valueOf(trafficLightColor));
+		
+		// TODO turn on for debugging manual mode:		
+//		if (manual) {
+//			System.out.println(manualTrafficLight);
+//			System.out.println(trafficLightColor);
+//		}
+	}
+	
+	public void setFreezeMode(boolean freezeMode) {
+		controller.updateEnvVariable("freezeMode", String.valueOf(freezeMode));
+	}
+	
+	public void setFog(boolean fog) {
+		controller.updateEnvVariable("foggy", String.valueOf(fog)); // update spectra env variable
+	}
 
-	public void setRoadConstructions(boolean closed) {
+	public void setRoadConstructions(boolean roadConstruction) {
 		// Update spectra for env road construction
-		controller.updateEnvVariable("roadConstructions", String.valueOf(closed));
+		// Assume that while freeze mode is on and the south straight lane traffic light
+		// is green, then road construction should be false.
+		if (freezeModeTimer.isOn() && roadConstruction && controller.getSysVariable("greenSouthVehicles[1]")) {
+			roadConstruction = false;
+		}
+		
+		controller.updateEnvVariable("roadConstructions", String.valueOf(roadConstruction));
 	}
 
 	private boolean constructionsLanesAreClear(boolean init, boolean ignoreState) {
@@ -414,20 +472,12 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		}
 	}
 
-	public void setFog(boolean isFoggy) {
-		controller.updateEnvVariable("foggy", String.valueOf(isFoggy)); // update spectra env variable
-	}
-
 	public void updateFog() {
 		if (this._fog.isVisible()) { // controls the fog movement
 			this._fog._x--;
 			if (this._fog.getX() == -1600)
 				this._fog._x = 0;
 		}
-	}
-
-	public void setFreezeMode(boolean freezeMode) {
-		controller.updateEnvVariable("freezeMode", String.valueOf(freezeMode));
 	}
 
 	public void free() {

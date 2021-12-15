@@ -45,6 +45,12 @@ class JunctionState {
 		stateEnvMap.put("foggy", "false");
 		stateEnvMap.put("roadConstructions", "false");
 		stateEnvMap.put("freezeMode", "false");
+		
+		// manual mode
+		stateEnvMap.put("manualMode", "false");
+		stateEnvMap.put("manualTrafficLight", "VEHICLE_N_STRAIGHT"); // choose arbitrary value
+		stateEnvMap.put("trafficLightColor", "RED"); // choose arbitrary color
+		
 	}
 
 	public HashMap<String, String> getEnvState() {

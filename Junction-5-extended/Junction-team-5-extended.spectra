@@ -59,7 +59,6 @@ sys boolean[2] greenWestPedestrians;
 // ******************************************
 
 env boolean freezeMode;
-env boolean manualMode;
 
 // ***************** Defines *****************
 define right_lane := 0;
@@ -77,54 +76,56 @@ define east := 1;
 
 // ============================== Vehicles road logic ==============================
 
-// ----- North right lane logic -----
+// All following guarantees are valid as long as manual mode is off or the traffic light that manual mode controls is not
+// the traffic light that the guarantees handle (i.e the ignoreManualMode predicate evaluates to false).
 
+// ----- North right lane logic -----
 gar alw !greenWestPedestrians[north] & !greenNorthPedestrians[west] & 
-		(vehiclesNorth[right_lane] = CAR & !foggy | vehiclesNorth[right_lane] = EMERGENCY) & !freezeMode -> 
+		(vehiclesNorth[right_lane] = CAR & !foggy | vehiclesNorth[right_lane] = EMERGENCY) & !freezeMode & ignoreManualMode(VEHICLE_N_RIGHT) -> 
 		greenNorthVehicles[right_lane];
 gar alw (greenWestPedestrians[north] | greenNorthPedestrians[west] | 
-		!(vehiclesNorth[right_lane] = CAR & !foggy | vehiclesNorth[right_lane] = EMERGENCY)) & !freezeMode -> 
+		!(vehiclesNorth[right_lane] = CAR & !foggy | vehiclesNorth[right_lane] = EMERGENCY)) & !freezeMode & ignoreManualMode(VEHICLE_N_RIGHT) ->
 		!greenNorthVehicles[right_lane];
 
 // ----- North straight lane logic -----
 gar alw !greenSouthPedestrians[west] & !greenNorthPedestrians[west] & !greenSouthVehicles[left_lane] &
-		(vehiclesNorth[straight_lane] = CAR & !foggy | vehiclesNorth[straight_lane] = EMERGENCY) & !freezeMode -> 
-		greenNorthVehicles[straight_lane];
+		(vehiclesNorth[straight_lane] = CAR & !foggy | vehiclesNorth[straight_lane] = EMERGENCY) & !freezeMode & 
+		ignoreManualMode(VEHICLE_N_STRAIGHT) ->	greenNorthVehicles[straight_lane];
 gar alw (greenSouthPedestrians[west] | greenNorthPedestrians[west] | greenSouthVehicles[left_lane] |
-		!(vehiclesNorth[straight_lane] = CAR & !foggy | vehiclesNorth[straight_lane] = EMERGENCY)) & !freezeMode -> 
-		!greenNorthVehicles[straight_lane];
+		!(vehiclesNorth[straight_lane] = CAR & !foggy | vehiclesNorth[straight_lane] = EMERGENCY)) & !freezeMode & 
+		ignoreManualMode(VEHICLE_N_STRAIGHT) ->	!greenNorthVehicles[straight_lane];
 
 // ----- North left lane logic -----
 gar alw !greenEastPedestrians[south] & !greenNorthPedestrians[west] & !greenSouthVehicles[straight_lane] &
-		!greenSouthVehicles[left_lane] & (vehiclesNorth[left_lane] = CAR & !foggy | vehiclesNorth[left_lane] = EMERGENCY) & !freezeMode -> 
-		greenNorthVehicles[left_lane];
+		!greenSouthVehicles[left_lane] & (vehiclesNorth[left_lane] = CAR & !foggy | vehiclesNorth[left_lane] = EMERGENCY) & !freezeMode &
+		ignoreManualMode(VEHICLE_N_LEFT) -> greenNorthVehicles[left_lane];
 gar alw (greenEastPedestrians[south] | greenNorthPedestrians[west] | greenSouthVehicles[straight_lane] |
-		greenSouthVehicles[left_lane] | !(vehiclesNorth[left_lane] = CAR & !foggy | vehiclesNorth[left_lane] = EMERGENCY)) & !freezeMode ->
-		!greenNorthVehicles[left_lane];
+		greenSouthVehicles[left_lane] | !(vehiclesNorth[left_lane] = CAR & !foggy | vehiclesNorth[left_lane] = EMERGENCY)) & !freezeMode &
+		ignoreManualMode(VEHICLE_N_LEFT) ->	!greenNorthVehicles[left_lane];
 		
 // ----- South right lane logic -----
 gar alw !greenEastPedestrians[south] & !greenSouthPedestrians[east] & 
-		(vehiclesSouth[right_lane] = CAR & !foggy | vehiclesSouth[right_lane] = EMERGENCY) & !freezeMode -> 
-		greenSouthVehicles[right_lane];
+		(vehiclesSouth[right_lane] = CAR & !foggy | vehiclesSouth[right_lane] = EMERGENCY) & !freezeMode & 
+		ignoreManualMode(VEHICLE_S_RIGHT) -> greenSouthVehicles[right_lane];
 gar alw (greenEastPedestrians[south] | greenSouthPedestrians[east] | 
-		!(vehiclesSouth[right_lane] = CAR & !foggy | vehiclesSouth[right_lane] = EMERGENCY)) & !freezeMode -> 
-		!greenSouthVehicles[right_lane];
+		!(vehiclesSouth[right_lane] = CAR & !foggy | vehiclesSouth[right_lane] = EMERGENCY)) & !freezeMode & 
+		ignoreManualMode(VEHICLE_S_RIGHT) -> !greenSouthVehicles[right_lane];
 
 // ----- South straight lane logic -----
 gar alw !greenNorthPedestrians[east] & !greenSouthPedestrians[east] & !greenNorthVehicles[left_lane] &
 		(vehiclesSouth[straight_lane] = CAR & !foggy | vehiclesSouth[straight_lane] = EMERGENCY) & 
-		!roadConstructions & !freezeMode -> greenSouthVehicles[straight_lane];
+		!roadConstructions & !freezeMode & ignoreManualMode(VEHICLE_S_STRAIGHT) -> greenSouthVehicles[straight_lane];
 gar alw (greenNorthPedestrians[east] | greenSouthPedestrians[east] | greenNorthVehicles[left_lane] |
-		!(vehiclesSouth[straight_lane] = CAR & !foggy | vehiclesSouth[straight_lane] = EMERGENCY) | roadConstructions) & !freezeMode -> 
-		!greenSouthVehicles[straight_lane];
+		!(vehiclesSouth[straight_lane] = CAR & !foggy | vehiclesSouth[straight_lane] = EMERGENCY) | roadConstructions) & !freezeMode &
+		ignoreManualMode(VEHICLE_S_STRAIGHT) -> !greenSouthVehicles[straight_lane];
 
 // ----- South left lane logic -----
 gar alw !greenWestPedestrians[north] & !greenSouthPedestrians[east] & !greenNorthVehicles[straight_lane] &
 		!greenNorthVehicles[left_lane] & (vehiclesSouth[left_lane] = CAR & !foggy | vehiclesSouth[left_lane] = EMERGENCY) & 
-		!freezeMode -> greenSouthVehicles[left_lane];
+		!freezeMode & ignoreManualMode(VEHICLE_S_LEFT) -> greenSouthVehicles[left_lane];
 gar alw (greenWestPedestrians[north] | greenSouthPedestrians[east] | greenNorthVehicles[straight_lane] |
-		greenNorthVehicles[left_lane] | !(vehiclesSouth[left_lane] = CAR & !foggy | vehiclesSouth[left_lane] = EMERGENCY)) & !freezeMode -> 
-		!greenSouthVehicles[left_lane];
+		greenNorthVehicles[left_lane] | !(vehiclesSouth[left_lane] = CAR & !foggy | vehiclesSouth[left_lane] = EMERGENCY)) & !freezeMode &
+		ignoreManualMode(VEHICLE_S_LEFT) -> !greenSouthVehicles[left_lane];
 
 // ============================== Pedestrian crosswalks logic ==============================
 
@@ -132,38 +133,44 @@ gar alw (greenWestPedestrians[north] | greenSouthPedestrians[east] | greenNorthV
 gar alw greenEastPedestrians[north];
 gar alw greenWestPedestrians[south];
 
+// All following guarantees are valid as long as manual mode is off or the traffic light that manual mode controls is not
+// the traffic light that the guarantees handle (i.e the ignoreManualMode predicate evaluates to false).
+
 // ----- North-West pedestrian crosswalk logic -----
 gar alw !greenNorthVehicles[right_lane] & !greenNorthVehicles[straight_lane] & !greenNorthVehicles[left_lane] &
-		pedestriansNorthPressed[west] & !freezeMode -> greenNorthPedestrians[west];
+		pedestriansNorthPressed[west] & !freezeMode & ignoreManualMode(PEDESTRIAN_NW) -> greenNorthPedestrians[west];
 gar alw (greenNorthVehicles[right_lane] | greenNorthVehicles[straight_lane] | greenNorthVehicles[left_lane] |
-		!pedestriansNorthPressed[west]) & !freezeMode -> !greenNorthPedestrians[west];
+		!pedestriansNorthPressed[west]) & !freezeMode & ignoreManualMode(PEDESTRIAN_NW) -> !greenNorthPedestrians[west];
 
 // ----- South-West pedestrian crosswalk logic -----
-gar alw !greenNorthVehicles[straight_lane] & pedestriansSouthPressed[west] & !freezeMode -> greenSouthPedestrians[west];
-gar alw (greenNorthVehicles[straight_lane] | !pedestriansSouthPressed[west])& !freezeMode -> !greenSouthPedestrians[west];
+gar alw !greenNorthVehicles[straight_lane] & pedestriansSouthPressed[west] & !freezeMode & ignoreManualMode(PEDESTRIAN_SW) -> 
+		greenSouthPedestrians[west];
+gar alw (greenNorthVehicles[straight_lane] | !pedestriansSouthPressed[west])& !freezeMode & ignoreManualMode(PEDESTRIAN_SW) -> 
+		!greenSouthPedestrians[west];
 
 // ----- South-East pedestrian crosswalk logic -----
 gar alw !greenSouthVehicles[right_lane] & !greenSouthVehicles[straight_lane] & !greenSouthVehicles[left_lane] &
-		pedestriansSouthPressed[east] & !freezeMode -> greenSouthPedestrians[east];
+		pedestriansSouthPressed[east] & !freezeMode & ignoreManualMode(PEDESTRIAN_SE) -> greenSouthPedestrians[east];
 gar alw (greenSouthVehicles[right_lane] | greenSouthVehicles[straight_lane] | greenSouthVehicles[left_lane] |
-		!pedestriansSouthPressed[east]) & !freezeMode -> !greenSouthPedestrians[east];
+		!pedestriansSouthPressed[east]) & !freezeMode & ignoreManualMode(PEDESTRIAN_SE) -> !greenSouthPedestrians[east];
 
 // ----- North-East pedestrian crosswalk logic -----
-gar alw !greenSouthVehicles[straight_lane] & pedestriansNorthPressed[east] & !freezeMode -> greenNorthPedestrians[east];
-gar alw (greenSouthVehicles[straight_lane] | !pedestriansNorthPressed[east]) & !freezeMode -> !greenNorthPedestrians[east];
+gar alw !greenSouthVehicles[straight_lane] & pedestriansNorthPressed[east] & !freezeMode & ignoreManualMode(PEDESTRIAN_NE) -> 
+		greenNorthPedestrians[east];
+gar alw (greenSouthVehicles[straight_lane] | !pedestriansNorthPressed[east]) & !freezeMode & ignoreManualMode(PEDESTRIAN_NE) -> 
+		!greenNorthPedestrians[east];
 
 // ----- West-North pedestrian crosswalk logic -----
-gar alw !greenNorthVehicles[right_lane] & !greenSouthVehicles[left_lane] & pedestriansWestPressed[north] & !freezeMode ->
-		greenWestPedestrians[north];
-gar alw (greenNorthVehicles[right_lane] | greenSouthVehicles[left_lane] | !pedestriansWestPressed[north]) & !freezeMode ->
-		!greenWestPedestrians[north];
+gar alw !greenNorthVehicles[right_lane] & !greenSouthVehicles[left_lane] & pedestriansWestPressed[north] & !freezeMode & 
+		ignoreManualMode(PEDESTRIAN_WN) -> greenWestPedestrians[north];
+gar alw (greenNorthVehicles[right_lane] | greenSouthVehicles[left_lane] | !pedestriansWestPressed[north]) & !freezeMode & 
+		ignoreManualMode(PEDESTRIAN_WN) -> !greenWestPedestrians[north];
 
 // ----- East-South pedestrian crosswalk logic -----
-gar alw !greenNorthVehicles[left_lane] & !greenSouthVehicles[right_lane] & pedestriansEastPressed[south] & !freezeMode ->
-		greenEastPedestrians[south];
-gar alw (greenNorthVehicles[left_lane] | greenSouthVehicles[right_lane] | !pedestriansEastPressed[south]) & !freezeMode ->
-		!greenEastPedestrians[south];
-		
+gar alw !greenNorthVehicles[left_lane] & !greenSouthVehicles[right_lane] & pedestriansEastPressed[south] & !freezeMode & 
+		ignoreManualMode(PEDESTRIAN_ES) -> greenEastPedestrians[south];
+gar alw (greenNorthVehicles[left_lane] | greenSouthVehicles[right_lane] | !pedestriansEastPressed[south]) & !freezeMode & 
+		ignoreManualMode(PEDESTRIAN_ES) -> !greenEastPedestrians[south];
 
 // ========================== Avoid traffic starvation ==========================
 
@@ -251,17 +258,17 @@ counter mode_counter(1..(3 * mode_cycle)) {
 	overflow: modulo;
 }
 
-// Turn on 'PEDESTRIANS' mode only if there are pedestrian waiting and it's time
-gar alw pedestrian_time & pedestrians_waiting -> mode = PEDESTRIANS; 
+// Turn on 'PEDESTRIANS' mode only if there are pedestrian waiting, it's time for pedestrians cycle and manual mode is off.
+gar alw pedestrian_time & pedestrians_waiting & !manualMode -> mode = PEDESTRIANS; 
 
-// Turn on 'NORTH_VEHICLES' mode only if vehicles are waiting and it's time
-gar alw north_vehicles_time & north_vehicles_waiting -> mode = NORTH_VEHICLES;
+// Turn on 'NORTH_VEHICLES' mode only if vehicles are waiting and it's time for north vehicles cycle and manual mode is off.
+gar alw north_vehicles_time & north_vehicles_waiting & !manualMode -> mode = NORTH_VEHICLES;
 
-// Turn on 'SOUTH_VEHICLES' mode only if south vehicles are waiting and it's time
-gar alw south_vehicles_time & south_vehicles_waiting -> mode = SOUTH_VEHICLES;
+// Turn on 'SOUTH_VEHICLES' mode only if south vehicles are waiting and it's time for south vehicles cycle and manual mode is off.
+gar alw south_vehicles_time & south_vehicles_waiting & !manualMode -> mode = SOUTH_VEHICLES;
 
 // Turn on 'AUTO' mode in all other cases
-gar alw auto_mode_time -> mode = AUTO;
+gar alw auto_mode_time | manualMode -> mode = AUTO;
 	
 // ========================== Pedestrians wait until there is a green light ==========================
 
@@ -296,29 +303,53 @@ asm alw vehiclesSouth[left_lane] != NONE & !greenSouthVehicles[left_lane] ->
 
 // ========================== Emergency priorities ==========================
 
-// South right lane emergency vehicle has priority over south-east and east-south pedestrians
-gar alw vehiclesSouth[right_lane] = EMERGENCY & !freezeMode & mode = AUTO -> !greenEastPedestrians[south] & !greenSouthPedestrians[east];
+// If manual mode is on, all emergency priorities must comply with the traffic light that is controlled by the manual mode.
+// For example, an emergency vehicle might not get a priority when manual mode is on and forces one of the traffic light that interfere with 
+// it's path to become GREEN. It also will not get a priority if manual mode forces it to become red.
+// When manual mode is off, all regular priority rules apply.
 
+// South right lane emergency vehicle has priority over south-east and east-south pedestrians
+gar alw vehiclesSouth[right_lane] = EMERGENCY & !freezeMode & mode = AUTO &
+	 (!manualMode | manualMode & !manualModeChoiceRED(VEHICLE_S_RIGHT) & 
+	 !(manualModeChoiceGREEN(PEDESTRIAN_ES) | manualModeChoiceGREEN(PEDESTRIAN_SE))) -> 
+	 !greenEastPedestrians[south] & !greenSouthPedestrians[east];
+	 
 // North right lane emergency vehicle has priority over north-west and west-north pedestrians
-gar alw vehiclesNorth[right_lane] = EMERGENCY & !freezeMode & mode = AUTO -> !greenWestPedestrians[north] & !greenNorthPedestrians[west];
+gar alw vehiclesNorth[right_lane] = EMERGENCY & !freezeMode & mode = AUTO & 
+		(!manualMode | manualMode & !manualModeChoiceRED(VEHICLE_N_RIGHT) & 
+		!(manualModeChoiceGREEN(PEDESTRIAN_WN) | manualModeChoiceGREEN(PEDESTRIAN_NW))) -> 
+		!greenWestPedestrians[north] & !greenNorthPedestrians[west];
 
 // South straight lane emergency vehicle has priority over north left lane vehicle, south-east and north-east pedestrians
-gar alw vehiclesSouth[straight_lane] = EMERGENCY & !roadConstructions & !freezeMode & mode = AUTO ->
+gar alw vehiclesSouth[straight_lane] = EMERGENCY & !roadConstructions & !freezeMode & mode = AUTO & 
+		(!manualMode | manualMode & !manualModeChoiceRED(VEHICLE_S_STRAIGHT) & 
+		!(manualModeChoiceGREEN(VEHICLE_N_LEFT) | manualModeChoiceGREEN(PEDESTRIAN_SE) | 
+		manualModeChoiceGREEN(PEDESTRIAN_NE))) ->
 		!greenNorthVehicles[left_lane] & !greenSouthPedestrians[east] & !greenNorthPedestrians[east];
 
+		
 // North straight lane emergency vehicle has priority over south left lane vehicle, south-west and north-west pedestrians
-gar alw vehiclesNorth[straight_lane] = EMERGENCY & !freezeMode & mode = AUTO ->
+gar alw vehiclesNorth[straight_lane] = EMERGENCY & !freezeMode & mode = AUTO &
+		(!manualMode | manualMode & !manualModeChoiceRED(VEHICLE_N_STRAIGHT) &
+		!(manualModeChoiceGREEN(VEHICLE_S_LEFT) | manualModeChoiceGREEN(PEDESTRIAN_SW) | 
+		manualModeChoiceGREEN(PEDESTRIAN_NW))) ->
 		!greenSouthVehicles[left_lane] & !greenSouthPedestrians[west] & !greenNorthPedestrians[west];
 
 // South left lane emergency vehicle has priority over north straight lane non-emergency vehicle, north left lane emergency vehicle, 
-// and south-east and west-north pedestrians 
-gar alw vehiclesSouth[left_lane] = EMERGENCY & vehiclesNorth[straight_lane] != EMERGENCY & !freezeMode & mode = AUTO -> 
+// and south-east and west-north pedestrians
+gar alw vehiclesSouth[left_lane] = EMERGENCY & vehiclesNorth[straight_lane] != EMERGENCY & !freezeMode & mode = AUTO & 
+		(!manualMode | manualMode & !manualModeChoiceRED(VEHICLE_S_LEFT) & 
+		!(manualModeChoiceGREEN(VEHICLE_N_STRAIGHT) | manualModeChoiceGREEN(VEHICLE_N_LEFT) | 
+		manualModeChoiceGREEN(PEDESTRIAN_SE) | manualModeChoiceGREEN(PEDESTRIAN_WN))) -> 
 		!greenNorthVehicles[straight_lane] & !greenNorthVehicles[left_lane] & !greenSouthPedestrians[east] & !greenWestPedestrians[north];
 
 // North left lane emergency vehicle has priority over south straight and left lanes non-emergency vehicles, 
-// and north-west and east-south pedestrians 		
+// and north-west and east-south pedestrians 
 gar alw vehiclesNorth[left_lane] = EMERGENCY & (vehiclesSouth[straight_lane] != EMERGENCY | roadConstructions) & 
-		vehiclesSouth[left_lane] != EMERGENCY & !freezeMode & mode = AUTO -> 
+		vehiclesSouth[left_lane] != EMERGENCY & !freezeMode & mode = AUTO & 
+		(!manualMode | manualMode & !manualModeChoiceRED(VEHICLE_N_LEFT) & 
+		!(manualModeChoiceGREEN(VEHICLE_S_STRAIGHT) | manualModeChoiceGREEN(VEHICLE_S_LEFT) | 
+		manualModeChoiceGREEN(PEDESTRIAN_NW) | manualModeChoiceGREEN(PEDESTRIAN_ES))) -> 
 		!greenSouthVehicles[straight_lane] & !greenSouthVehicles[left_lane] & !greenNorthPedestrians[west] & !greenEastPedestrians[south];
 
 // ========================== Freeze mode ==========================
@@ -342,3 +373,64 @@ gar alw next(freezeMode) -> greenNorthVehicles[straight_lane] = next(greenNorthV
 					greenNorthPedestrians[east] = next(greenNorthPedestrians[east]) &
 					greenSouthPedestrians[west] = next(greenSouthPedestrians[west]) & 
 					greenSouthPedestrians[east] = next(greenSouthPedestrians[east]);
+
+// ========================== Manual mode ==========================
+
+env boolean manualMode;
+
+type TrafficLight = {VEHICLE_N_RIGHT, VEHICLE_N_STRAIGHT, VEHICLE_N_LEFT,
+					VEHICLE_S_RIGHT, VEHICLE_S_STRAIGHT, VEHICLE_S_LEFT,
+					PEDESTRIAN_NW, PEDESTRIAN_NE, PEDESTRIAN_WN, 
+					PEDESTRIAN_SW, PEDESTRIAN_SE, PEDESTRIAN_ES};
+					
+type Light = {RED, GREEN};
+
+// 'manualTrafficLight' indicates the specific traffic light which is controlled during manual mode.
+env TrafficLight manualTrafficLight;
+
+// 'trafficLightColor' indicates the color of manualTrafficLight which is controlled during manual mode. 
+env Light trafficLightColor;
+
+// Assume manualMode cannot turn on at the same time with freezeMode or fog.
+asm alw !(manualMode & (freezeMode | foggy));
+
+asm alw !(manualMode & manualTrafficLight = VEHICLE_S_STRAIGHT & roadConstructions);
+
+// If manual mode is on then the specific traffic light it controls must turn to the color that the environment chooses.  
+gar alw manualMode -> manualModeChoiceGREEN(VEHICLE_N_RIGHT) & greenNorthVehicles[right_lane] |
+						manualModeChoiceRED(VEHICLE_N_RIGHT) & !greenNorthVehicles[right_lane] |						
+						manualModeChoiceGREEN(VEHICLE_N_STRAIGHT) & greenNorthVehicles[straight_lane] |
+						manualModeChoiceRED(VEHICLE_N_STRAIGHT) & !greenNorthVehicles[straight_lane] |						
+						manualModeChoiceGREEN(VEHICLE_N_LEFT) & greenNorthVehicles[left_lane] |
+						manualModeChoiceRED(VEHICLE_N_LEFT) & !greenNorthVehicles[left_lane] |						
+						manualModeChoiceGREEN(VEHICLE_S_RIGHT) & greenSouthVehicles[right_lane] |
+						manualModeChoiceRED(VEHICLE_S_RIGHT) & !greenSouthVehicles[right_lane] |						
+						manualModeChoiceGREEN(VEHICLE_S_STRAIGHT) & greenSouthVehicles[straight_lane] |
+						manualModeChoiceRED(VEHICLE_S_STRAIGHT) & !greenSouthVehicles[straight_lane] |						
+						manualModeChoiceGREEN(VEHICLE_S_LEFT) & greenSouthVehicles[left_lane] |
+						manualModeChoiceRED(VEHICLE_S_LEFT) & !greenSouthVehicles[left_lane] |							
+						manualModeChoiceGREEN(PEDESTRIAN_NW) & greenNorthPedestrians[west] |
+						manualModeChoiceRED(PEDESTRIAN_NW) & !greenNorthPedestrians[west] |						
+						manualModeChoiceGREEN(PEDESTRIAN_NE) & greenNorthPedestrians[east] |
+						manualModeChoiceRED(PEDESTRIAN_NE) & !greenNorthPedestrians[east] |						
+						manualModeChoiceGREEN(PEDESTRIAN_WN) & greenWestPedestrians[north] |
+						manualModeChoiceRED(PEDESTRIAN_WN) & !greenWestPedestrians[north] |						
+						manualModeChoiceGREEN(PEDESTRIAN_SW) & greenSouthPedestrians[west] |
+						manualModeChoiceRED(PEDESTRIAN_SW) & !greenSouthPedestrians[west] |
+						manualModeChoiceGREEN(PEDESTRIAN_SE) & greenSouthPedestrians[east] |
+						manualModeChoiceRED(PEDESTRIAN_SE) & !greenSouthPedestrians[east] |
+						manualModeChoiceGREEN(PEDESTRIAN_ES) & greenEastPedestrians[south] |
+						manualModeChoiceRED(PEDESTRIAN_ES) & !greenEastPedestrians[south];
+
+predicate ignoreManualMode(TrafficLight trafficLight):
+	(!manualMode | manualMode & manualTrafficLight != trafficLight);
+
+// Indicate if the value of the specific traffic light that was chosen during manual mode equals to the parameter 
+// and that the color that was chosen is GREEN.
+predicate manualModeChoiceGREEN(TrafficLight trafficLight):
+	manualTrafficLight = trafficLight & trafficLightColor = GREEN;
+
+// Indicate if the value of the specific traffic light that was chosen during manual mode equals to the parameter 
+// and that the color that was chosen is RED.
+predicate manualModeChoiceRED(TrafficLight trafficLight):
+	manualTrafficLight = trafficLight & trafficLightColor = RED;
