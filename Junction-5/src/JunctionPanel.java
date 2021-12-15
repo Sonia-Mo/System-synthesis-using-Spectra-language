@@ -34,7 +34,7 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	private HashMap<Integer, VehicleOptions> _carsInLanes = new HashMap<>(); // Map that indicates whether a lane is
 																				// occupied
 	private javax.swing.Timer _timer;
-	
+
 	private boolean eventTime = true;
 
 	private JunctionTimer eventTimer = new JunctionTimer();
@@ -201,15 +201,14 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 			g2d.drawImage(this._loading.getImage(), this._loading.getX(), this._loading.getY(), this);
 		}
 	}
-	
+
 	private boolean timeForEvent() {
 		// if timer is over, switch eventTime value and set a new timer
 		if (!eventTimer.isOn()) {
 			eventTime = !eventTime;
 			if (eventTime) {
 				eventTimer.startTimer(2000);
-			}
-			else {
+			} else {
 				eventTimer.startTimer(4000);
 			}
 		}
@@ -223,14 +222,14 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 			boolean fogOn = rand.nextBoolean();
 			if (fogOn) {
 				fogTimer.startTimer(3000);
-			}
-			else {
-				freezeModeTimer.startTimer(5000);	
+			} else {
+				freezeModeTimer.startTimer(5000);
 			}
 		}
 		if (!roadConstructionTimer.isOn()) {
-			if (rand.nextBoolean());
-				roadConstructionTimer.startTimer(4000);
+			if (rand.nextBoolean()) {
+			roadConstructionTimer.startTimer(4000);
+			}
 		}
 	}
 
@@ -238,13 +237,10 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 	private void injectTraffic() {
 		Random rand = new Random();
 		if (!trafficTimer.isOn() && !isCarsCrossing() && !isPedsCrossing()) {
-			if (rand.nextBoolean())
-				createPedestrian(100);
-			if (rand.nextBoolean())
-				createVehicle(false);
-			if (rand.nextBoolean())
-				createVehicle(true);
-			
+			createPedestrian(100);
+			createVehicle(false);
+			createVehicle(true);
+
 			trafficTimer.startTimer(400);
 		}
 	}
@@ -270,7 +266,8 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 			// Assign env variables to spectra specification
 			// Assume that while freeze mode is on and the south straight lane traffic light
 			// is green, then road construction should be false.
-			if (freezeModeTimer.isOn() && roadConstructionTimer.isOn() && controller.getSysVariable("greenSouthVehicles[1]")) {
+			if (freezeModeTimer.isOn() && roadConstructionTimer.isOn()
+					&& controller.getSysVariable("greenSouthVehicles[1]")) {
 				setRoadConstructions(false);
 			} else {
 				setRoadConstructions(roadConstructionTimer.isOn());
