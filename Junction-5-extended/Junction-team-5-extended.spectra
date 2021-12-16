@@ -304,8 +304,8 @@ asm alw vehiclesSouth[left_lane] != NONE & !greenSouthVehicles[left_lane] ->
 // ========================== Emergency priorities ==========================
 
 // If manual mode is on, all emergency priorities must comply with the traffic light that is controlled by the manual mode.
-// For example, an emergency vehicle might not get a priority when manual mode is on and forces one of the traffic light that interfere with 
-// it's path to become GREEN. It also will not get a priority if manual mode forces it to become red.
+// For example, an emergency vehicle won't get a priority when manual mode is on and forces one of the traffic light that interfere with 
+// its path to become GREEN. It also will not get a priority if manual mode forces it to become red.
 // When manual mode is off, all regular priority rules apply.
 
 // South right lane emergency vehicle has priority over south-east and east-south pedestrians

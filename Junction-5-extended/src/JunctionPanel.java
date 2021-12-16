@@ -238,13 +238,13 @@ public class JunctionPanel extends BackgroundPanel implements ActionListener {
 		if (!fogTimer.isOn() && !freezeModeTimer.isOn() && !manualModeTimer.isOn()) {
 			int event = rand.nextInt(3);
 			switch (event) {
-			case 1:
+			case 0:
 				manualModeTimer.startTimer(6000);
 				break;
-			case 2:
+			case 1:
 				fogTimer.startTimer(3000);
 				break;
-			case 3:
+			case 2:
 				freezeModeTimer.startTimer(5000);
 				break;
 			}
