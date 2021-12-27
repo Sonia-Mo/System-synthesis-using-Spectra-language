@@ -1,0 +1,269 @@
+import "./imports/DwyerPatternsNamed.spectra"
+spec Cleaner
+
+define Dim := 8;
+type Coord = Int(0..(Dim - 1));
+ 
+sys Coord robotX;
+sys Coord robotY;
+env Coord[2] target;
+
+// *********************************************
+// ***      General Task Requirements        ***
+// *********************************************
+
+type Color = {GREEN, RED, BLUE, YELLOW, GRAY};
+sys Color robot_color;
+
+// Environment variable which indicates if a target should be cleaned.
+// In case cleaning_request = false ignore target variable.
+env boolean cleaning_request;
+
+env boolean green_light;
+
+// A cleaning target can be any cell that is not (0,0) and not an obstacle.
+asm alw !on_obstacle(target[0], target[1]) & !at_origin(target[0], target[1]);
+
+// Fix the initial location of the robot at (0,0).
+gar ini robot_at_origin;
+
+// Make sure robot doesn't walk over obstacles.
+gar alw !on_obstacle(robotX, robotY);	
+
+// The robot can move to adjacent cells horizontally or vertically, but not diagonally.
+gar alw move_vertically | move_horizontally | stay;
+
+// If there is a cleaning request from a target, the robot should eventually visit it.
+gar alwEv cleaning_target;
+
+// Assume cleaning_request always eventually turns on, so that the guaranty above will hold.
+asm alwEv cleaning_request;
+
+// ============= color definitions =============
+// GREEN: When robot is cleaning a target.
+// RED: When robot is waiting for green light and is not cleaning a target.
+// GRAY: When robot is not waiting for green light and it is in sleep mode.
+// YELLOW: When tank is full, robot is not in sleep mode and is not waiting for green light.
+// BLUE: All other cases.
+gar alw cleaning_target & robot_color = GREEN |
+	(initial_wait_count = 8 & !initial_green_light | orange_steps > 5 & !cleaning_target) & robot_color = RED |
+	initial_green_light & sleep_mode & robot_color = GRAY |
+	initial_green_light & orange_steps <= 5 & !sleep_mode & tank = full_tank & robot_color = YELLOW |
+	(initial_wait_count < 8 | initial_green_light & orange_steps <= 5 & !cleaning_target & 
+	tank != full_tank & !sleep_mode) & robot_color = BLUE;
+		
+// *********************************************
+// ***          Property #1                  ***
+// *********************************************
+
+type Rotation = {NONE, DEG_0, DEG_90, DEG_180, DEG_270};
+
+sys Rotation robot_rotation;
+
+gar alw at_orange_zone <-> robot_rotation != NONE;
+
+// When the robot reaches the orange zone, it starts its rotation from 0 degrees.
+gar alw !at_orange_zone & next(at_orange_zone) -> next(robot_rotation) = DEG_0;
+
+// Whenever the robot reaches the orange zone, it repeatedly switches its usual appearance.
+// Its appearance rotates 90 degrees to the right at each step, until it leaves the orange zone.
+gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_0 -> next(robot_rotation) = DEG_90;
+gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_90 -> next(robot_rotation) = DEG_180;
+gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_180 -> next(robot_rotation) = DEG_270;
+gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_270 -> next(robot_rotation) = DEG_0;
+
+// *********************************************
+// ***          Property #2                  ***
+// *********************************************
+
+
+// Represents the number of consecutive states the robot has been on the orange zone.
+// orange_steps = 7 -> the robot spent 5 consecutive states in the orange zone and waited 2 steps in place
+// and is now waiting for green light to turn on.
+sys Int(0..7) orange_steps;
+
+// Counter resets when the robot is out of the orange zone.
+gar alw orange_steps != 0 <-> at_orange_zone;
+
+// If robot has been at the orange zone for 5 or 6 consecutive states then it should stay in place in the next state.
+gar alw orange_steps = 5 | orange_steps = 6 -> stay;
+
+// If orange_steps < 7 than in the next state it would be incremented (in case robot steps inside the orange zone)
+// or set to 0 (in case robot steps outside of the orange zone).
+gar alw orange_steps < 7 -> next(orange_steps) = orange_steps + 1 | next(orange_steps) = 0;
+
+// If orange_steps = 7 and there isn't a green light then it should not change and the robot should stay in place.
+gar alw PREV(orange_steps = 7) & !green_light -> orange_steps = 7;
+gar alw next(orange_steps = 7) -> stay;
+
+// If orange_steps = 7 and there is a green light then orange_steps should be reseted and the robot can 
+// start moving again (if robot moves out of the orange zone orange_steps is set to 0 and otherwise to 1).
+gar alw PREV(orange_steps = 7) & green_light -> orange_steps = 0 | orange_steps = 1;
+
+// *********************************************
+// ***          Property #3                  ***
+// *********************************************
+
+// Counter which indicates the cleaning progress of a target.
+sys Int(0..5) cleaning_target_counter;
+
+gar alw !cleaning_target <-> cleaning_target_counter = 0;
+
+// Robot should stay and the counter should be incremented.
+gar alw 0 < cleaning_target_counter & cleaning_target_counter < 5 -> 
+		next(cleaning_target_counter) = cleaning_target_counter + 1 & stay;
+
+// If robot starts cleaning a target then counter should be set to 1.	
+gar alw cleaning_target_counter = 0 & next(cleaning_target) -> next(cleaning_target_counter) = 1;
+
+// After finishing cleaning, i.e counter reached 5, reset it.
+gar alw cleaning_target_counter = 5 -> next(cleaning_target_counter = 0 | cleaning_target_counter = 1);
+
+// As long as there is a cleaning request and the counter is less then 5, the cleaning request will remain true 
+// and the target will be fixed in place.
+// If left condition doesn't hold, the value of cleaning request is determined (randomly) by the environment.
+asm alw cleaning_target_counter < 5 & cleaning_request -> fixed_inplace(target[0], target[1]) & next(cleaning_request);
+
+// *********************************************
+// ***          Property #4                  ***
+// *********************************************
+
+env boolean permission_to_empty;
+
+// Counter that represents the tank's state.
+sys Int(0..full_tank) tank;
+define full_tank := 5;
+
+gar ini tank = 0;
+
+// Defining tank transitions:
+// * tank is incremented after robot finished cleaning the target.
+// * If robot has not finished the target (or there is no cleaning request) then tank stays the same.
+// * If the tank is full and robot is not at origin or permission_to_empty will be false in the next state
+// 	 then the tank stays full.
+// * If the tank is full and robot is at origin and permission_to_empty will be true then the tank resets to 0.
+gar alw cleaning_target_counter = 5 & next(tank) = tank + 1 |
+		cleaning_target_counter != 5 & tank != full_tank & next(tank) = tank |
+		tank = full_tank & next(tank) = full_tank & (!robot_at_origin | !next(permission_to_empty)) |
+		tank = full_tank & next(tank) = 0 & robot_at_origin & next(permission_to_empty);
+
+// After the tank is resets, robot should stay another state in origin.					
+gar alw PREV(tank = full_tank) & tank = 0 -> stay;
+
+// As long as tank is full and robot is at origin, it should stay there.
+gar alw tank = full_tank & robot_at_origin -> stay;
+
+// Randomly assigned by the environment.
+asm alwEv permission_to_empty;
+
+// *********************************************
+// ***          Property #5                  ***
+// *********************************************
+
+define max_clean_steps := 8;
+
+sys boolean sleep_mode;
+
+// Counter for number of consecutive states without a cleaning request.
+sys Int(0..max_clean_steps) no_target_counter;
+
+gar ini no_target_counter = 0;
+gar ini !sleep_mode;
+
+// Define all possible transitions of 'no_target_counter'.
+gar alw reset_no_target_counter_upon_clean_request | 
+		inc_no_target_counter | 
+		reached_max_clean_steps_at_orange_zone |
+ 		sleep_in_white_zone | 
+ 		wake_up;
+
+// Reset counter upon cleaning request in the following conditions:
+// * Robot is at orange zone and cleaning request is turned on in the next state.
+// * Robot is at white zone and the counter hasn't reached max value.
+// In both cases, robot shouldn't be sleeping in the next state.
+define reset_no_target_counter_upon_clean_request :=
+ 		next(cleaning_request) & (at_orange_zone | !at_orange_zone & no_target_counter != max_clean_steps) &
+ 		next(no_target_counter) = 0 & !next(sleep_mode);
+
+// Increment counter if there is no cleaning request in the next state. 		
+define inc_no_target_counter :=
+		no_target_counter != max_clean_steps & !next(cleaning_request) &
+		next(no_target_counter) = no_target_counter + 1 & !next(sleep_mode);
+
+// If counter reached its' max value and robot is at orange zone, keep counter's value at maximum and:
+// * If robot stays at orange zone in the next state - then it should still be awake.
+// * If robot enters a cell in white zone in the next state - then it should fall asleep.
+define reached_max_clean_steps_at_orange_zone :=
+		at_orange_zone & no_target_counter = max_clean_steps & !next(cleaning_request) & 
+		next(no_target_counter) = max_clean_steps & (!next(sleep_mode) & next(at_orange_zone) | 
+		next(sleep_mode) & !next(at_orange_zone));
+
+// If robot at white zone and the counter's value is at maximum, enter sleep mode in the next state.
+// If there is not a cleaning request - keep counter's value at maximum.
+// If there is a cleaning request - reset counter.
+define sleep_in_white_zone := !at_orange_zone & no_target_counter = max_clean_steps & stay &  next(sleep_mode) &
+	 (!(cleaning_request) & next(no_target_counter) = max_clean_steps | 
+	 	(cleaning_request) & next(no_target_counter) = 0);
+ 		
+// Wake up after a cleaning request was made in the previous state and stay one more turn.	
+define wake_up := !at_orange_zone & no_target_counter = 0  & sleep_mode &
+		 stay & next(no_target_counter) = 0 & !next(sleep_mode);
+
+// *********************************************
+// ***          Property #6                  ***
+// *********************************************
+
+asm alwEv green_light;
+
+sys Int(1..8) initial_wait_count;
+gar ini initial_wait_count = 1;
+
+// Increment counter until it reaches 8.
+gar alw initial_wait_count < 8 & next(initial_wait_count) = initial_wait_count + 1 |
+		initial_wait_count = 8 & next(initial_wait_count) = 8;
+
+// Indicates that there was a green light after the initial 8 waiting steps.
+sys boolean initial_green_light;
+
+// initial_green_light is false and robot stays at origin as long as there still haven't passed 8 steps.
+gar alw PREV(initial_wait_count < 8) -> !initial_green_light & robot_at_origin;
+
+// If 8 steps have passed and there still haven't been green light then the robot stays at origin.
+gar alw PREV(initial_wait_count = 8) & !green_light & PREV(!initial_green_light) -> !initial_green_light & robot_at_origin;
+
+// If 8 steps have passed and there is currently green light that initial_green_light is turned on and
+// the robot is allowed to move freely.
+gar alw PREV(initial_wait_count = 8) & green_light & PREV(!initial_green_light) -> initial_green_light;
+
+// Once initial_green_light is turned on it stays on.
+gar alw initial_green_light -> next(initial_green_light);
+
+// *********************************************
+// ***          Predicates and Defines                 ***
+// *********************************************
+
+predicate on_obstacle(Coord x, Coord y):
+	(x = 1 & y = 1) | (x = 2 & y = 1) | (x = 3 & y = 1) | (x = 4 & y = 1) | (x = 5 & y = 1) | 
+	(x = 1 & y = 4) | (x = 2 & y = 4) | (x = 3 & y = 4) | (x = 4 & y = 4) | (x = 5 & y = 4) |
+	(x = 1 & y = 7) | (x = 4 & y = 7);
+
+predicate at_origin(Coord x, Coord y):
+	x = 0 & y = 0;
+
+predicate fixed_inplace(Coord x, Coord y):
+	x = next(x) & y = next(y);
+	
+define robot_at_origin := at_origin(robotX, robotY);
+
+define at_target := robotX = target[0] & robotY = target[1];
+
+define move_vertically := (next(robotY) = robotY - 1 | next(robotY) = robotY + 1) & next(robotX) = robotX;
+	
+define move_horizontally :=	(next(robotX) = robotX - 1 | next(robotX) = robotX + 1) & next(robotY) = robotY;
+
+define stay := fixed_inplace(robotX, robotY);
+	
+define at_orange_zone := (robotX >= 1 & robotX <= 5) & 
+					(robotY = 0 | robotY = 2 | robotY = 3 | robotY = 5 | robotY = 6);
+
+define cleaning_target := cleaning_request & at_target & tank != full_tank;	
