@@ -60,17 +60,30 @@ type Rotation = {NONE, DEG_0, DEG_90, DEG_180, DEG_270};
 
 sys Rotation robot_rotation;
 
-gar alw at_orange_zone <-> robot_rotation != NONE;
+//gar alw at_orange_zone <-> robot_rotation != NONE;
+//
+//// When the robot reaches the orange zone, it starts its rotation from 0 degrees.
+//gar alw !at_orange_zone & next(at_orange_zone) -> next(robot_rotation) = DEG_0;
+//
+//// Whenever the robot reaches the orange zone, it repeatedly switches its usual appearance.
+//// Its appearance rotates 90 degrees to the right at each step, until it leaves the orange zone.
+//gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_0 -> next(robot_rotation) = DEG_90;
+//gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_90 -> next(robot_rotation) = DEG_180;
+//gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_180 -> next(robot_rotation) = DEG_270;
+//gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_270 -> next(robot_rotation) = DEG_0;
+
+gar trig [true]*[!at_orange_zone & robot_rotation != NONE] |=> [false];
+gar trig [true]*[at_orange_zone & robot_rotation = NONE] |=> [false];
 
 // When the robot reaches the orange zone, it starts its rotation from 0 degrees.
-gar alw !at_orange_zone & next(at_orange_zone) -> next(robot_rotation) = DEG_0;
+gar trig [true]*[!at_orange_zone] |=> [at_orange_zone & robot_rotation = DEG_0 | !at_orange_zone];
 
 // Whenever the robot reaches the orange zone, it repeatedly switches its usual appearance.
 // Its appearance rotates 90 degrees to the right at each step, until it leaves the orange zone.
-gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_0 -> next(robot_rotation) = DEG_90;
-gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_90 -> next(robot_rotation) = DEG_180;
-gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_180 -> next(robot_rotation) = DEG_270;
-gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_270 -> next(robot_rotation) = DEG_0;
+gar trig [true]*[at_orange_zone & robot_rotation = DEG_0] |=> [at_orange_zone & robot_rotation = DEG_90 | !at_orange_zone];
+gar trig [true]*[at_orange_zone & robot_rotation = DEG_90] |=> [at_orange_zone & robot_rotation = DEG_180 | !at_orange_zone];
+gar trig [true]*[at_orange_zone & robot_rotation = DEG_180] |=> [at_orange_zone & robot_rotation = DEG_270 | !at_orange_zone];
+gar trig [true]*[at_orange_zone & robot_rotation = DEG_270] |=> [at_orange_zone & robot_rotation = DEG_0 | !at_orange_zone];
 
 // *********************************************
 // ***          Property #2                  ***
@@ -132,7 +145,7 @@ env boolean permission_to_empty;
 
 // Counter that represents the tank's state.
 sys Int(0..full_tank) tank;
-define full_tank := 5;
+define full_tank := 2;
 
 gar ini tank = 0;
 
@@ -221,7 +234,7 @@ gar ini initial_wait_count = 1;
 // Increment counter until it reaches 8.
 gar alw initial_wait_count < 8 & next(initial_wait_count) = initial_wait_count + 1 |
 		initial_wait_count = 8 & next(initial_wait_count) = 8;
-
+		
 // Indicates that there was a green light after the initial 8 waiting steps.
 sys boolean initial_green_light;
 
