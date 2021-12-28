@@ -39,19 +39,28 @@ gar alwEv cleaning_target;
 // Assume cleaning_request always eventually turns on, so that the guaranty above will hold.
 asm alwEv cleaning_request;
 
-// ============= color definitions =============
+// ============= Updated color definitions for part 2 =============
 // GREEN: When robot is cleaning a target.
 // RED: When robot is waiting for green light and is not cleaning a target.
 // GRAY: When robot is not waiting for green light and it is in sleep mode.
 // YELLOW: When tank is full, robot is not in sleep mode and is not waiting for green light.
 // BLUE: All other cases.
-gar alw cleaning_target & robot_color = GREEN |
-	(initial_wait_count = 8 & !initial_green_light | orange_steps > 5 & !cleaning_target) & robot_color = RED |
-	initial_green_light & sleep_mode & robot_color = GRAY |
-	initial_green_light & orange_steps <= 5 & !sleep_mode & tank = full_tank & robot_color = YELLOW |
-	(initial_wait_count < 8 | initial_green_light & orange_steps <= 5 & !cleaning_target & 
-	tank != full_tank & !sleep_mode) & robot_color = BLUE;
-		
+gar alw cleaning_target -> robot_color = GREEN;
+gar alw orange_steps > 5 & !cleaning_target -> robot_color = RED;
+gar alw !initial_wait & sleep_mode -> robot_color = GRAY;
+gar alw !initial_wait & orange_steps <= 5 & !sleep_mode & tank = full_tank -> robot_color = YELLOW;
+gar alw !initial_wait & orange_steps <= 5 & !cleaning_target & 
+	tank != full_tank & !sleep_mode -> robot_color = BLUE;
+
+/* ================ Original color definition guaranty ================
+ * gar alw cleaning_target & robot_color = GREEN |
+ *	(initial_wait_count = 8 & !initial_green_light | orange_steps > 5 & !cleaning_target) & robot_color = RED |
+ *	initial_green_light & sleep_mode & robot_color = GRAY |
+ *	initial_green_light & orange_steps <= 5 & !sleep_mode & tank = full_tank & robot_color = YELLOW |
+ *	(initial_wait_count < 8 | initial_green_light & orange_steps <= 5 & !cleaning_target & 
+ *	tank != full_tank & !sleep_mode) & robot_color = BLUE;
+ */
+ 		
 // *********************************************
 // ***          Property #1                  ***
 // *********************************************
@@ -60,18 +69,7 @@ type Rotation = {NONE, DEG_0, DEG_90, DEG_180, DEG_270};
 
 sys Rotation robot_rotation;
 
-//gar alw at_orange_zone <-> robot_rotation != NONE;
-//
-//// When the robot reaches the orange zone, it starts its rotation from 0 degrees.
-//gar alw !at_orange_zone & next(at_orange_zone) -> next(robot_rotation) = DEG_0;
-//
-//// Whenever the robot reaches the orange zone, it repeatedly switches its usual appearance.
-//// Its appearance rotates 90 degrees to the right at each step, until it leaves the orange zone.
-//gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_0 -> next(robot_rotation) = DEG_90;
-//gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_90 -> next(robot_rotation) = DEG_180;
-//gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_180 -> next(robot_rotation) = DEG_270;
-//gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_270 -> next(robot_rotation) = DEG_0;
-
+// ================ Part 2 guarantees with triggers ================
 gar trig [true]*[!at_orange_zone & robot_rotation != NONE] |=> [false];
 gar trig [true]*[at_orange_zone & robot_rotation = NONE] |=> [false];
 
@@ -84,6 +82,15 @@ gar trig [true]*[at_orange_zone & robot_rotation = DEG_0] |=> [at_orange_zone & 
 gar trig [true]*[at_orange_zone & robot_rotation = DEG_90] |=> [at_orange_zone & robot_rotation = DEG_180 | !at_orange_zone];
 gar trig [true]*[at_orange_zone & robot_rotation = DEG_180] |=> [at_orange_zone & robot_rotation = DEG_270 | !at_orange_zone];
 gar trig [true]*[at_orange_zone & robot_rotation = DEG_270] |=> [at_orange_zone & robot_rotation = DEG_0 | !at_orange_zone];
+
+/* ================ Original guarantees without triggers ================
+ * gar alw at_orange_zone <-> robot_rotation != NONE;
+ * gar alw !at_orange_zone & next(at_orange_zone) -> next(robot_rotation) = DEG_0;
+ * gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_0 -> next(robot_rotation) = DEG_90;
+ * gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_90 -> next(robot_rotation) = DEG_180;
+ * gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_180 -> next(robot_rotation) = DEG_270;
+ * gar alw at_orange_zone & next(at_orange_zone) & robot_rotation = DEG_270 -> next(robot_rotation) = DEG_0;
+ */
 
 // *********************************************
 // ***          Property #2                  ***
@@ -228,31 +235,40 @@ define wake_up := !at_orange_zone & no_target_counter = 0  & sleep_mode &
 
 asm alwEv green_light;
 
-sys Int(1..8) initial_wait_count;
-gar ini initial_wait_count = 1;
+// ================ Part 2 guarantees with triggers ================
 
-// Increment counter until it reaches 8.
-gar alw initial_wait_count < 8 & next(initial_wait_count) = initial_wait_count + 1 |
-		initial_wait_count = 8 & next(initial_wait_count) = 8;
-		
-// Indicates that there was a green light after the initial 8 waiting steps.
-sys boolean initial_green_light;
+// Indicate if the robot is waiting for the 8 initial steps to pass (including waiting for green light).
+sys boolean initial_wait;
 
-// initial_green_light is false and robot stays at origin as long as there still haven't passed 8 steps.
-gar alw PREV(initial_wait_count < 8) -> !initial_green_light & robot_at_origin;
+gar ini initial_wait;
+gar ini robot_color = BLUE;
 
-// If 8 steps have passed and there still haven't been green light then the robot stays at origin.
-gar alw PREV(initial_wait_count = 8) & !green_light & PREV(!initial_green_light) -> !initial_green_light & robot_at_origin;
+// while 'initial_wait' = true the robot must stay in place.
+gar alw next(initial_wait) -> stay;
 
-// If 8 steps have passed and there is currently green light that initial_green_light is turned on and
-// the robot is allowed to move freely.
-gar alw PREV(initial_wait_count = 8) & green_light & PREV(!initial_green_light) -> initial_green_light;
+// After 'intial_wait' turns off, it stays off. 
+gar alw !initial_wait -> !next(initial_wait);
 
-// Once initial_green_light is turned on it stays on.
-gar alw initial_green_light -> next(initial_green_light);
+// 'initial_wait' = true at the beginning and therefore the left side regex holds. 
+// The right side regex guarantees that the robot waits in place for 7 more steps and than waits for green light
+// to turn on.
+gar trig [initial_wait] |=> [initial_wait & robot_color = BLUE]{7}[!green_light & initial_wait & robot_color = RED]*
+			[green_light & !initial_wait];
+
+/* ================ Original guarantees without triggers ================
+ * sys Int(1..8) initial_wait_count;
+ * gar ini initial_wait_count = 1;
+ * gar alw initial_wait_count < 8 & next(initial_wait_count) = initial_wait_count + 1 |
+ *		initial_wait_count = 8 & next(initial_wait_count) = 8;
+ * sys boolean initial_green_light;
+ * gar alw PREV(initial_wait_count < 8) -> !initial_green_light & robot_at_origin;
+ * gar alw PREV(initial_wait_count = 8) & !green_light & PREV(!initial_green_light) -> !initial_green_light & robot_at_origin;
+ * gar alw PREV(initial_wait_count = 8) & green_light & PREV(!initial_green_light) -> initial_green_light;
+ * gar alw initial_green_light -> next(initial_green_light); 
+ */
 
 // *********************************************
-// ***          Predicates and Defines                 ***
+// ***          Predicates and Defines       ***
 // *********************************************
 
 predicate on_obstacle(Coord x, Coord y):
