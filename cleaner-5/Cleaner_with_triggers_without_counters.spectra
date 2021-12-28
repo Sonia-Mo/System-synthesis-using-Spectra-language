@@ -152,7 +152,7 @@ env boolean permission_to_empty;
 
 // Counter that represents the tank's state.
 sys Int(0..full_tank) tank;
-define full_tank := 2;
+define full_tank := 5;
 
 gar ini tank = 0;
 
@@ -167,14 +167,19 @@ gar alw cleaning_target_counter = 5 & next(tank) = tank + 1 |
 		tank = full_tank & next(tank) = full_tank & (!robot_at_origin | !next(permission_to_empty)) |
 		tank = full_tank & next(tank) = 0 & robot_at_origin & next(permission_to_empty);
 
-// After the tank is resets, robot should stay another state in origin.					
-gar alw PREV(tank = full_tank) & tank = 0 -> stay;
-
-// As long as tank is full and robot is at origin, it should stay there.
-gar alw tank = full_tank & robot_at_origin -> stay;
-
 // Randomly assigned by the environment.
 asm alwEv permission_to_empty;
+
+// ================ Part 2 guarantees with triggers ================
+// When the robot’s garbage tank is full, it must go back to origin, and wait for the environment to report
+// that the tank has been emptied, and then wait at least 2 more states before it moves.
+gar trig [true]*[tank = full_tank] |=> [!robot_at_origin]*[robot_at_origin & !permission_to_empty]*
+	[permission_to_empty & robot_at_origin][robot_at_origin]{2};
+
+/* ================ Original guarantees without triggers ================
+ * gar alw PREV(tank = full_tank) & tank = 0 -> stay;
+ * gar alw tank = full_tank & robot_at_origin -> stay;
+ */
 
 // *********************************************
 // ***          Property #5                  ***
