@@ -8,6 +8,8 @@ public class JunctionTDController {
 	CTDExecutor ctrlExec;
 	boolean _is_start = true;
 
+	static final String CTD_path = "out/ctd.out/2022-01-02_15-14-00.317/";
+
 	public JunctionTDController() {
 		System.out.println("Create CTD controller");
 
@@ -18,11 +20,8 @@ public class JunctionTDController {
 			}
 
 			ctrlExec = new CTDExecutorContinuing("out/", /* Folder containing symbolic controller */
-					"out/ctd.out/2021-12-27_13-21-14.473/Junction-team-x.spectra_tree.bin", /*
-																							 * .spectra_tree.bin test
-																							 * suite file
-																							 */
-					"out/ctd.out/2021-12-27_13-21-14.473/", /* Folder containing the test suite BDDs */
+					CTD_path + "Junction-team-5.spectra_tree.bin", /* .spectra_tree.bin test suite file */
+					CTD_path, /* Folder containing the test suite BDDs */
 					false); /* Should we turn on auto reordering? */
 			
 			

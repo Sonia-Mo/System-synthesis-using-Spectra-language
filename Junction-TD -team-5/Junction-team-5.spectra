@@ -8,7 +8,7 @@ spec JunctionModule
 
 type Vehicle = {NONE, CAR, EMERGENCY};
 
-// ****************************************************************************************
+// ************************]****************************************************************
 // *** cars arrays env variables, index 0 - right , index 1 - straight , index 2 - left ***
 // ****************************************************************************************
 
@@ -59,7 +59,6 @@ sys boolean[2] greenWestPedestrians;
 // ******************************************
 
 env boolean freezeMode;
-env boolean manualMode;
 
 // ***************** Defines *****************
 define right_lane := 0;
@@ -342,3 +341,5 @@ gar alw next(freezeMode) -> greenNorthVehicles[straight_lane] = next(greenNorthV
 					greenNorthPedestrians[east] = next(greenNorthPedestrians[east]) &
 					greenSouthPedestrians[west] = next(greenSouthPedestrians[west]) & 
 					greenSouthPedestrians[east] = next(greenSouthPedestrians[east]);
+	
+asm ini !freezeMode;
