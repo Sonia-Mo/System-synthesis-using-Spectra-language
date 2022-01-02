@@ -343,3 +343,135 @@ gar alw next(freezeMode) -> greenNorthVehicles[straight_lane] = next(greenNorthV
 					greenSouthPedestrians[east] = next(greenSouthPedestrians[east]);
 	
 asm ini !freezeMode;
+
+// ****************************************************************************************
+// ***                                   Regexp Tests                                   ***
+// ****************************************************************************************
+
+// ******************** Scenarios that the junction should allow ********************
+
+// test #0: When there are emergency vehicles in both left lanes, south vehicle should get a priority over the north vehicle
+regtest prioritizeSouthLeftEmergency:
+	[true]*[mode = AUTO & !freezeMode & vehiclesSouth[left_lane] = EMERGENCY & vehiclesNorth[left_lane] = EMERGENCY & 
+	vehiclesNorth[straight_lane] != EMERGENCY & vehiclesSouth[straight_lane] != EMERGENCY & 	
+	greenSouthVehicles[left_lane]];
+	
+// test #1: North straight emergency vehicle should get a priority over south left emergency vehicle
+regtest prioritizeNorthStraightEmergency:
+	[true]*[mode = AUTO & !freezeMode & vehiclesSouth[left_lane] = EMERGENCY & vehiclesNorth[straight_lane] = EMERGENCY & 
+	greenNorthVehicles[straight_lane]];
+	
+// test #2: At some point, there are vehicles in all lanes
+regtest carsInAllLanes:
+	[true]*[vehiclesSouth[right_lane] != NONE & vehiclesSouth[straight_lane] != NONE & vehiclesSouth[left_lane] != NONE &
+	vehiclesNorth[right_lane] != NONE & vehiclesNorth[straight_lane] != NONE & vehiclesNorth[left_lane] != NONE];
+
+// test #3: At some point, there are no vehicles at all
+regtest noCarsAtAll:
+	[true]*[vehiclesSouth[right_lane] = NONE & vehiclesSouth[straight_lane] = NONE & vehiclesSouth[left_lane] = NONE &
+	vehiclesNorth[right_lane] = NONE & vehiclesNorth[straight_lane] = NONE & vehiclesNorth[left_lane] = NONE];
+	
+// test #4: Check if periodic behavior to avoid starvation works 
+regtest antiStarvationCycle:
+	[true]*[mode = PEDESTRIANS][mode = AUTO]{4}[mode = NORTH_VEHICLES][mode = AUTO]{4}
+	[mode = SOUTH_VEHICLES][mode = AUTO]{4};
+
+// test #5: freeze and fog shouldn't be allowed together
+regtest freezeAndFogValid: 
+		[true]*[freezeMode & !foggy | !freezeMode & foggy];
+
+// test #6: If a CAR waits and there is no green light, it should stay and wait
+regtest vehicleDisappearAfterWaiting: 
+		[true]*[vehiclesSouth[right_lane] = CAR & !greenSouthVehicles[right_lane]]{2}
+		[vehiclesSouth[right_lane] = CAR];
+					
+// test #7: If a pedestrian waits and there is no green light, he should stay and wait
+regtest pedestrianDisappearAfterWaiting: 
+		[true]*[pedestriansEastPressed[south] & !greenEastPedestrians[south]]{3}[pedestriansEastPressed[south]];
+
+// test #8: If there is a green light in the south straight lane, 
+// 			freeze mode and road constructions should not be allowed to occur concurrently
+regtest freezeAndRoadConstructionsValid: 
+		[true]*[greenSouthVehicles[straight_lane]]
+		[!freezeMode & roadConstructions | freezeMode & !roadConstructions];
+
+// test #9: At some point, there are pedestrians in all sidewalks
+regtest pedestriansInAllSidewalks:
+	[true]*[pedestriansEastPressed[south] & pedestriansEastPressed[north] & pedestriansWestPressed[south] &
+	pedestriansWestPressed[north] & pedestriansSouthPressed[west] & pedestriansSouthPressed[east] &
+	pedestriansNorthPressed[west] & pedestriansNorthPressed[east]];
+
+// test #10: At some point, there are no pedestrians at all
+regtest noPedestriansAtAll:
+	[true]*[!pedestriansEastPressed[south] & !pedestriansEastPressed[north] & !pedestriansWestPressed[south] &
+	!pedestriansWestPressed[north] & !pedestriansSouthPressed[west] & !pedestriansSouthPressed[east] &
+	!pedestriansNorthPressed[west] & !pedestriansNorthPressed[east]];
+
+// test #11: Check if a specific car eventually crosses the junction
+regtest carEventuallyCrosses:
+	[true]*[vehiclesSouth[right_lane] = CAR][true]*[vehiclesSouth[right_lane] = NONE];
+
+// test #12: Check if pedestrian eventually crosses sidewalk
+regtest pedestrianEventuallyCrosses:
+	[true]*[pedestriansSouthPressed[east]][true]*[!pedestriansSouthPressed[east]];
+
+// test #13: When it is foggy emergency vehicles can cross the junction
+regtest emergencyCanCrossOnFog:
+	[true]*[foggy & vehiclesSouth[right_lane] = EMERGENCY & greenSouthVehicles[right_lane]];
+
+// test #14: When it is foggy non-emergency vehicles can't cross the junction
+regtest carCannotCrossOnFog:
+	[true]*[foggy & vehiclesSouth[right_lane] = CAR & !greenSouthVehicles[right_lane]];
+
+// ******************** Scenarios that the junction should NOT allow ********************
+
+// test #15: North left lane and South left lane traffic lights cannot turn green at the same time
+regtest LeftLanesCollision:
+	[true]*[greenNorthVehicles[left_lane] & greenSouthVehicles[left_lane]];
+
+// test #16: While it is auto mode and freeze mode is off, there cannot be a scenario in which a pedestrian 
+// gets priority over emergency vehicle
+regtest pedestrianGetsPriorityOverEmergency:
+	[true]*[mode = AUTO & !freezeMode & pedestriansEastPressed[south] & greenEastPedestrians[south] 
+	& vehiclesSouth[right_lane] = EMERGENCY];
+
+// test #17: When there are emergency vehicles in both left lanes, north vehicle shouldn't get a priority over the south vehicle
+regtest northLeftEmergencyGetsPriorityOverSouthLeft:
+	[true]*[mode = AUTO & !freezeMode & vehiclesSouth[left_lane] = EMERGENCY & vehiclesNorth[left_lane] = EMERGENCY & 
+	vehiclesNorth[straight_lane] != EMERGENCY & vehiclesSouth[straight_lane] != EMERGENCY & 	
+	greenNorthVehicles[left_lane]];
+
+// test #18: South left emergency vehicle shouldn't get a priority over north straight emergency vehicle
+regtest southLeftEmergencyGetsPriorityOverStraight:
+	[true]*[mode = AUTO & !freezeMode & vehiclesSouth[left_lane] = EMERGENCY & vehiclesNorth[straight_lane] = EMERGENCY & 
+	greenSouthVehicles[left_lane]];
+
+// test #19: When there are road constructions, the traffic light at the south straight lane shouldn't be green
+regtest southStraightGreenAndRoadConstruction:
+	[true]*[roadConstructions & greenSouthVehicles[straight_lane]];
+
+// test #20: When mode = 'PEDESTRIANS', all pedestrians get priority over vehicles. 
+// In this case, the south east pedestrian shouldn't get red light
+regtest pedestriansDontGetPriority:
+	[true]*[mode = PEDESTRIANS & !freezeMode & pedestriansEastPressed[south] & !greenEastPedestrians[south]];
+
+// test #21: freeze and fog shouldn't be allowed together
+regtest freezeAndFogInvalid: 
+		[true]*[freezeMode & foggy];
+
+// test #22: If a vehicle waits and there is no green light, it should stay and wait
+regtest vehicleDoNotDisappearAfterWaiting: 
+		[true]*[vehiclesSouth[right_lane] != NONE & !greenSouthVehicles[right_lane]]{2}[vehiclesSouth[right_lane] = NONE];
+
+// test #23: If a pedestrian waits and there is no green light, he should stay and wait
+regtest pedestrianDoNotDisappearAfterWaiting: 
+		[true]*[pedestriansEastPressed[south] & !greenEastPedestrians[south]]{3}[!pedestriansEastPressed[south]];
+
+// test #24: If there is a green light in the south straight lane, freeze mode and road constructions should not be allowed to occur concurrently
+regtest freezeAndRoadConstructionsInvalid: 
+		[true]*[greenSouthVehicles[straight_lane]][freezeMode & roadConstructions];
+
+// test #25: When it is foggy non-emergency vehicles can't cross the junction
+regtest carCrossOnFog:
+	[true]*[foggy & vehiclesSouth[right_lane] = CAR & greenSouthVehicles[right_lane]];
+
