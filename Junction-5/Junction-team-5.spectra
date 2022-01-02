@@ -342,3 +342,6 @@ gar alw next(freezeMode) -> greenNorthVehicles[straight_lane] = next(greenNorthV
 					greenNorthPedestrians[east] = next(greenNorthPedestrians[east]) &
 					greenSouthPedestrians[west] = next(greenSouthPedestrians[west]) & 
 					greenSouthPedestrians[east] = next(greenSouthPedestrians[east]);
+					
+asm ini !freezeMode;
+
